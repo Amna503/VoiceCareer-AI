@@ -1,59 +1,11 @@
 @import "tailwindcss";
 
-@layer base {
-  html {
-    scroll-behavior: smooth;
-  }
-
-  /* Prevent unwanted horizontal scrolling on all viewports */
-  html,
-  body {
-    overflow-x: hidden;
-    max-width: 100%;
-  }
-
-  body {
-    background-color: #f8fafc;
-    color: #0f172a;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  /* Keep long words/URLs from breaking layout out of their containers */
-  .break-anywhere,
-  .whitespace-pre-wrap p {
-    overflow-wrap: anywhere;
-  }
-}
-
-/* Toast slide-in animation */
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.toast-enter {
-  animation: toast-in 0.2s ease-out forwards;
-}
-
-/* Voice orb pulse rings */
-@keyframes voice-ring {
-  0% {
-    transform: scale(1);
-    opacity: 0.45;
-  }
-  100% {
-    transform: scale(1.9);
-    opacity: 0;
-  }
-}
-
-.voice-ring {
-  animation: voice-ring 1.8s ease-out infinite;
+@theme {
+  --color-midnight-navy: #1A1A2E;
+  --color-electric-violet: #6C5CE7;
+  --color-voice-teal: #00CEC9;
+  --color-coral-pulse: #FF7675;
+  --color-soft-lavender: #A29BFE;
+  --color-cloud-white: #F4F3FF;
+  --color-slate-indigo: #2D2D44;
 }
