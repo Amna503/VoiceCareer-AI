@@ -5,6 +5,38 @@ import { synthesizeSpeech } from "../services/tts.js";
 
 const router = Router();
 
+/**
+ * GET /api/voice/token
+ * Mint a short-lived AssemblyAI streaming token.
+ * Keeps the permanent API key server-side for browser live transcription.
+ */
+router.get("/token", async (_req, res) => {
+  try {
+    const apiKey = process.env.ASSEMBLYAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "ASSEMBLYAI_API_KEY is not configured" });
+    }
+
+    const url = new URL("https://streaming.assemblyai.com/v3/token");
+    url.searchParams.set("expires_in_seconds", "300");
+
+    const response = await fetch(url, { headers: { authorization: apiKey } });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return res
+        .status(response.status)
+        .json({ error: text || "Failed to create streaming token" });
+    }
+
+    const data = await response.json();
+    res.json({ token: data.token, expiresIn: data.expires_in_seconds });
+  } catch (error) {
+    console.error("Streaming token error:", error.message);
+    res.status(500).json({ error: error.message || "Failed to create streaming token" });
+  }
+});
+
 router.post("/process", async (req, res) => {
   try {
     const { audio, history } = req.body;

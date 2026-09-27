@@ -40,7 +40,9 @@ the way they would with a real career counselor.
 ### 1.3 Non-Goals (v1)
 
 - No persistent user accounts or saved history across sessions.
-- No real-time streaming phone-style conversation (evaluated; falls back to turn-based voice). *(Future: AssemblyAI Voice Agent API for full-duplex streaming.)*
+- No hosted Voice Agent (managed full-duplex phone-style agent with built-in barge-in); voice is
+  turn-oriented: live streaming transcription with automatic end-of-turn detection is implemented,
+  but a server-managed agent session remains future work.
 - No mobile app — responsive web app only.
 - No production auth/billing.
 
@@ -89,6 +91,10 @@ When at least 5 of 8 categories have substantive data, the agent emits a
 - **Text-to-speech**: the response is synthesized and spoken back to the user
   (Groq Orpheus server-side, with browser `speechSynthesis` fallback).
 - A voice on/off toggle and a text input fallback are provided.
+- **Real-time (live) mode**: the browser streams the microphone to AssemblyAI
+  Universal-Streaming via a short-lived server-side token; words appear live as the user speaks,
+  and each turn is auto-submitted on end-of-turn (`end_of_turn`) so the conversation continues
+  hands-free. The mic is gated while the AI thinks/speaks to avoid echo.
 
 ### F3 — Adaptive Mock Interviews
 - Two modes: **TECHNICAL** (frontend / backend / data question banks) and **HR/BEHAVIORAL**.
@@ -115,7 +121,7 @@ Generates a personalized **30-day (4-week) roadmap**: weekly focus areas, goals,
 
 | Layer | Technology | Purpose |
 | --- | --- | --- |
-| Speech-to-Text | **AssemblyAI** | Audio transcription of user voice |
+| Speech-to-Text | **AssemblyAI** | Audio transcription of user voice (+ live Universal-Streaming in live mode) |
 | LLM / Agents | **Groq** (OpenAI-compatible) | Agent reasoning & generation |
 | Text-to-Speech | **Groq Orpheus** | Speak AI responses (browser fallback) |
 | Backend | **Node.js + Express** | API, session stores, integrations |
@@ -145,7 +151,9 @@ User speaks ──► Browser (MediaRecorder)
                                         Browser plays audio back to user
 ```
 
-The frontend also supports `/api/voice/process-text` for the typed fallback (same loop minus STT).
+The frontend also supports `/api/voice/process-text` for the typed fallback and live mode
+(same loop minus STT), and `/api/voice/token` mints a short-lived streaming token so the browser
+can authenticate live WebSocket transcription without exposing the API key.
 
 ---
 
@@ -158,6 +166,7 @@ Base: `http://localhost:3000` (frontend proxies `/api` → backend).
 | --- | --- | --- | --- |
 | POST | `/api/voice/process` | `{ audio: string(base64), history: [...] }` | `{ transcript, aiResponse, audio?, audioContentType? }` |
 | POST | `/api/voice/process-text` | `{ text: string, history: [...] }` | `{ transcript, aiResponse, audio?, audioContentType? }` |
+| GET | `/api/voice/token` | — | `{ token, expiresIn }` (AssemblyAI streaming token) |
 
 ### 7.2 Career Discovery
 | Method | Endpoint | Description |
@@ -273,6 +282,7 @@ Profile JSON shape:
 | Phase | Milestone | Owner |
 | --- | --- | --- |
 | 1 | Voice pipeline: STT + agent loop + TTS | Amna ✅ |
+| 1b | Real-time live voice (streaming STT, end-of-turn detection, hands-free loop) | Amna ✅ |
 | 2 | Career Discovery + Interview + Coach agents | Amna ✅ |
 | 3 | Express API + session store + evaluation endpoints | Momna |
 | 4 | React UI: pages, components, routing, toasts | Abiha |
@@ -295,7 +305,7 @@ Profile JSON shape:
 
 ## 14. Future Work
 
-- Full-duplex streaming conversation via the **AssemblyAI Voice Agent API**.
+- Hosted **AssemblyAI Voice Agent** session (managed full-duplex audio, built-in barge-in).
 - Persistent profiles & session history (database-backed).
 - Resume-directed interviews and more role-specific question banks.
 - Saved evaluation history and progress over time.

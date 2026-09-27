@@ -30,7 +30,9 @@ app.get("/api", (_req, res) => {
     version: "1.0.0",
     endpoints: {
       voice: {
-        "POST /api/voice/process": "Process voice input and get AI response"
+        "POST /api/voice/process": "Process voice input and get AI response",
+        "POST /api/voice/process-text": "Process text input and get AI response",
+        "GET /api/voice/token": "Get a short-lived live streaming token"
       },
       career: {
         "POST /api/career/start": "Start career discovery conversation",

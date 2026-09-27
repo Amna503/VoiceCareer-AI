@@ -8,6 +8,7 @@ listens, thinks, and talks back.
 ## Features
 
 - **Voice-first** — speak to the coach; transcribed with AssemblyAI, responses read back with Groq TTS (browser speech fallback).
+- **Real-time conversation** — switch on "Live Voice" and speak naturally: words appear as you talk (AssemblyAI Universal-Streaming WebSocket), the AI replies hands-free when you pause, then keeps listening for your next turn.
 - **Career Discovery** — conversational agent builds your profile across 8 categories.
 - **Adaptive Mock Interviews** — technical + behavioral modes; follow-up questions adapt to your answers (6–10 questions).
 - **Interview Evaluation** — scoring across 6 weighted criteria with structured feedback.
@@ -80,7 +81,7 @@ npm run build
 
 | Group | Endpoint |
 | --- | --- |
-| Voice | `POST /api/voice/process`, `POST /api/voice/process-text` |
+| Voice | `POST /api/voice/process`, `POST /api/voice/process-text`, `GET /api/voice/token` |
 | Career | `POST /api/career/start`, `POST /api/career/chat` |
 | Interview | `POST /api/interview/start`, `POST /api/interview/respond`, `POST /api/interview/voice` |
 | Evaluation | `POST /api/evaluate/interview`, `POST /api/evaluate/skill-gaps`, `POST /api/evaluate/roadmap`, `POST /api/evaluate/complete` |

@@ -4,6 +4,7 @@ import MessageDisplay from "../components/MessageDisplay";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorMessage from "../components/ErrorMessage";
 import { useToast } from "../components/toast-context";
+import RealtimeTranscriber from "../lib/realtimeTranscriber";
 
 export default function CoachPage() {
   const [messages, setMessages] = useState([]);
@@ -19,6 +20,11 @@ export default function CoachPage() {
   const messagesEndRef = useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [liveMode, setLiveMode] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [livePartial, setLivePartial] = useState("");
+
+  const transcriberRef = useRef(null);
 
   const showToast = useToast();
 
@@ -240,59 +246,140 @@ export default function CoachPage() {
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      if (transcriberRef.current) {
+        transcriberRef.current.disconnect().catch(() => {});
+        transcriberRef.current = null;
+      }
     };
   }, []);
+
+  const submitMessage = useCallback(
+    async (userText) => {
+      if (!userText || !userText.trim()) return;
+
+      const cleanText = userText.trim();
+      setIsLoading(true);
+      setError("");
+
+      // Show the user's words immediately (optimistic).
+      const userMessage = { role: "user", content: cleanText };
+      setMessages((prev) => [...prev, userMessage]);
+
+      try {
+        const response = await fetch("/api/voice/process-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: cleanText,
+            history: conversationHistoryRef.current,
+          }),
+        });
+
+        if (!response.ok) {
+          let errorMsg = "Failed to get response";
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorMsg;
+          } catch {}
+          throw new Error(errorMsg);
+        }
+
+        const data = await response.json();
+
+        const assistantMessage = { role: "assistant", content: data.aiResponse };
+        conversationHistoryRef.current = [
+          ...conversationHistoryRef.current,
+          userMessage,
+          assistantMessage,
+        ];
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        // Speak the AI response back
+        playAudio(data.audio, data.audioContentType, data.aiResponse);
+      } catch (err) {
+        setError(err.message || "Something went wrong");
+        showToast("error", err.message || "Something went wrong");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [playAudio, showToast]
+  );
 
   const sendText = async () => {
     if (!textInput.trim() || isLoading) return;
 
     const userText = textInput.trim();
     setTextInput("");
-    setIsLoading(true);
-    setError("");
+    showToast("success", "Sent. Check the AI coach's reply below.");
+    await submitMessage(userText);
+  };
 
+  const handleLiveTurn = useCallback(
+    (text) => {
+      setLivePartial("");
+      submitMessage(text);
+    },
+    [submitMessage]
+  );
+
+  const startLive = useCallback(async () => {
     try {
-      const response = await fetch("/api/voice/process-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: userText,
-          history: conversationHistoryRef.current,
-        }),
+      setError("");
+
+      const transcriber = new RealtimeTranscriber({
+        onPartial: (partial) => setLivePartial(partial),
+        onFinal: handleLiveTurn,
+        onError: (err) => {
+          console.error("Live transcription error:", err);
+          setError(err.message || "Live transcription failed");
+          showToast("error", err.message || "Live transcription failed");
+        },
+        onDisconnect: (reason) => {
+          console.warn("Live stream disconnected:", reason);
+          setIsListening(false);
+          setLivePartial("");
+          transcriberRef.current = null;
+          setLiveMode(false);
+          showToast("error", `Live voice ended (${reason}). Tap Start to retry.`);
+        },
       });
 
-      if (!response.ok) {
-        let errorMsg = "Failed to get response";
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.error || errorMsg;
-        } catch {}
-        throw new Error(errorMsg);
-      }
+      await transcriber.connect();
+      await transcriber.startMic();
 
-      const data = await response.json();
-
-      const userMessage = { role: "user", content: data.transcript || userText };
-      const assistantMessage = { role: "assistant", content: data.aiResponse };
-
-      conversationHistoryRef.current = [
-        ...conversationHistoryRef.current,
-        userMessage,
-        assistantMessage,
-      ];
-
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
-
-      showToast("success", "Sent. Check the AI coach's reply below.");
-      // Speak the AI response back
-      playAudio(data.audio, data.audioContentType, data.aiResponse);
+      transcriberRef.current = transcriber;
+      setLiveMode(true);
+      setIsListening(true);
+      setLivePartial("");
+      showToast("success", "Live voice on — speak a question, pause to send it.");
     } catch (err) {
-      setError(err.message || "Something went wrong");
-      showToast("error", err.message || "Something went wrong");
-    } finally {
-      setIsLoading(false);
+      console.error("Live voice error:", err);
+      setError(err.message || "Could not start live voice");
+      showToast("error", err.message || "Could not start live voice");
     }
-  };
+  }, [handleLiveTurn, showToast]);
+
+  const stopLive = useCallback(async () => {
+    setLivePartial("");
+    setIsListening(false);
+    const transcriber = transcriberRef.current;
+    transcriberRef.current = null;
+    try {
+      if (transcriber) await transcriber.disconnect();
+    } catch (err) {
+      console.error("Live voice stop error:", err);
+    }
+    setLiveMode(false);
+    showToast("info", "Live voice mode off.");
+  }, [showToast]);
+
+  // While the AI is thinking or speaking, mute the microphone to avoid echo.
+  useEffect(() => {
+    const transcriber = transcriberRef.current;
+    if (!transcriber || !liveMode) return;
+    transcriber.setSending(isListening && !isLoading && !isSpeaking);
+  }, [isListening, isLoading, isSpeaking, liveMode]);
 
   const toggleVoice = () => {
     setVoiceEnabled((v) => {
@@ -348,7 +435,50 @@ export default function CoachPage() {
           </div>
         )}
 
+        {/* Live conversation */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="font-semibold text-slate-900">Live conversation</h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Real-time voice with the AI. Speak naturally, pause to send, and the coach keeps
+                listening for your next question.
+              </p>
+            </div>
+            <button
+              onClick={liveMode ? stopLive : startLive}
+              aria-pressed={liveMode}
+              className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                liveMode
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
+              }`}
+            >
+              {liveMode ? "Stop Live Voice" : "Start Live Voice"}
+            </button>
+          </div>
+
+          {liveMode && (
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 min-h-[56px]">
+              <span className="relative flex h-3 w-3 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-600" />
+              </span>
+              <p className="text-sm text-slate-700 break-anywhere">
+                {livePartial
+                  ? livePartial
+                  : isLoading
+                    ? "Thinking…"
+                    : isSpeaking
+                      ? "AI is speaking — wait for your turn."
+                      : "Listening… speak your career question and pause to send."}
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Recording controls */}
+        {!liveMode && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <RecordingControls
             isRecording={isRecording}
@@ -396,6 +526,7 @@ export default function CoachPage() {
             </div>
           </div>
         </div>
+        )}
       </main>
     </div>
   );
