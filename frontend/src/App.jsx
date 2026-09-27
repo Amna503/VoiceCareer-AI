@@ -1,53 +1,45 @@
-import { useEffect } from "react";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
-import { ToastProvider } from "./components/Toast";
-import { useHashRoute } from "./lib/router";
-import { usePageMeta } from "./lib/usePageMeta";
-import LandingPage from "./pages/LandingPage";
-import CoachPage from "./pages/CoachPage";
-import NotFoundPage from "./pages/NotFoundPage";
+import { useState } from 'react'
+import InterviewPage from './pages/InterviewPage'
+import DashboardPage from './pages/DashboardPage'
 
-const PAGE_META = {
-  "/": {
-    title: "VoiceCareer AI — AI Voice Career Coach & Mock Interviewer",
-    description:
-      "VoiceCareer AI is an AI-powered voice career coach. Discover your ideal career path, practice adaptive mock interviews, and build a personalized career roadmap by speaking.",
-  },
-  "/coach": {
-    title: "Voice Coach — VoiceCareer AI",
-    description:
-      "Start a voice session with the VoiceCareer AI coach: ask career questions, rehearse mock interviews, and get instant personalized feedback.",
-  },
-};
+function App() {
+  const [showInterview, setShowInterview] = useState(false)
+  const [showDashboard, setShowDashboard] = useState(false)
 
-const NOT_FOUND_META = {
-  title: "Page Not Found — VoiceCareer AI",
-  description: "The page you're looking for doesn't exist.",
-};
+  if (showDashboard) {
+    return <DashboardPage />
+  }
 
-export default function App() {
-  const route = useHashRoute();
-
-  const meta = PAGE_META[route] || NOT_FOUND_META;
-  usePageMeta(meta.title, meta.description);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, [route]);
-
-  let page;
-  if (route === "/") page = <LandingPage />;
-  else if (route === "/coach") page = <CoachPage />;
-  else page = <NotFoundPage />;
+  if (showInterview) {
+    return <InterviewPage onFinish={() => setShowDashboard(true)} />
+  }
 
   return (
-    <ToastProvider>
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1">{page}</main>
-        <Footer />
-      </div>
-    </ToastProvider>
-  );
+    <div className="min-h-screen bg-midnight-navy text-cloud-white flex flex-col items-center justify-center px-6 text-center">
+      
+      <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-electric-violet to-voice-teal bg-clip-text text-transparent">
+        VoiceCareer AI
+      </h1>
+
+      <p className="text-lg text-soft-lavender mb-8">
+        "Speak. Practice. Improve. Build Your Career."
+      </p>
+
+      <p className="max-w-xl text-slate-300 mb-10">
+        Struggling to choose the right career path or practice interviews? 
+        VoiceCareer AI lets you speak naturally with an AI career coach — 
+        no forms, no typing, just conversation.
+      </p>
+
+      <button
+        onClick={() => setShowInterview(true)}
+        className="px-8 py-3 rounded-full bg-electric-violet hover:bg-voice-teal transition-colors duration-300 font-semibold text-white shadow-lg"
+      >
+        Start Interview
+      </button>
+
+    </div>
+  )
 }
+
+export default App
