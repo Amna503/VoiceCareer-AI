@@ -3,6 +3,7 @@ import MicButton from '../components/MicButton'
 import Transcript from '../components/Transcript'
 import ConnectionState from '../components/ConnectionState'
 import useVoiceAgent from '../hooks/useVoiceAgent'
+import { apiUrl } from '../lib/api'
 
 /**
  * Live mock interview driven by the AssemblyAI Voice Agent API.
@@ -19,7 +20,7 @@ function useTargetRoles() {
 
   useEffect(() => {
     let active = true
-    fetch('/api/evaluate/roles')
+    fetch(apiUrl('/api/evaluate/roles'))
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
         if (active && Array.isArray(payload?.roles)) {
@@ -168,7 +169,7 @@ function InterviewPage({ onFinish, onBack }) {
     try {
       await stop()
       if (interviewHistory.length >= 2) {
-        const response = await fetch('/api/evaluate/complete', {
+        const response = await fetch(apiUrl('/api/evaluate/complete'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

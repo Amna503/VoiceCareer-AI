@@ -5,6 +5,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorMessage from "../components/ErrorMessage";
 import { useToast } from "../components/toast-context";
 import RealtimeTranscriber from "../lib/realtimeTranscriber";
+import { apiUrl } from "../lib/api";
 
 export default function CoachPage() {
   const [messages, setMessages] = useState([]);
@@ -180,7 +181,7 @@ export default function CoachPage() {
         )
       );
 
-      const response = await fetch("/api/voice/process", {
+      const response = await fetch(apiUrl("/api/voice/process"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -266,7 +267,7 @@ export default function CoachPage() {
       setMessages((prev) => [...prev, userMessage]);
 
       try {
-        const response = await fetch("/api/voice/process-text", {
+        const response = await fetch(apiUrl("/api/voice/process-text"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

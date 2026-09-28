@@ -44,7 +44,16 @@ describe("service endpoints", () => {
   test("the health check reports ok", async () => {
     const { status, data } = await server.get("/health");
     assert.equal(status, 200);
-    assert.deepEqual(data, { status: "ok" });
+    // Railway polls this path, so it must stay cheap and must not report
+    // anything about key validity or other configuration state.
+    assert.equal(data.status, "ok");
+    assert.equal(data.service, "voicecareer-ai-api");
+    assert.equal(typeof data.uptimeSeconds, "number");
+    assert.equal(
+      JSON.stringify(data).includes("KEY"),
+      false,
+      "the health payload must not mention credentials",
+    );
   });
 
   test("the API index documents every route the frontend calls", async () => {

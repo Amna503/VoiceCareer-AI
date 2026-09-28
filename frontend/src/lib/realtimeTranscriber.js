@@ -1,3 +1,5 @@
+import { apiUrl } from "./api.js";
+
 const WS_URL = "wss://streaming.assemblyai.com/v3/ws";
 const TARGET_SAMPLE_RATE = 16000;
 
@@ -46,7 +48,7 @@ export default class RealtimeTranscriber {
   }
 
   async connect() {
-    const resp = await fetch("/api/voice/token");
+    const resp = await fetch(apiUrl("/api/voice/token"));
     if (!resp.ok) {
       const data = await resp.json().catch(() => ({}));
       throw new Error(data.error || "Could not get a live streaming token");

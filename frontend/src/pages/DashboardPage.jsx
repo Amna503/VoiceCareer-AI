@@ -4,6 +4,7 @@ import OverallScoreCard from '../components/dashboard/OverallScoreCard'
 import CategoryScoresCard from '../components/dashboard/CategoryScoresCard'
 import PerformanceSummaryCard from '../components/dashboard/PerformanceSummaryCard'
 import { ImprovementsCard, StrengthsCard } from '../components/dashboard/HighlightsCards'
+import { apiUrl } from '../lib/api'
 import SkillGapCard from '../components/dashboard/SkillGapCard'
 import RoadmapSection from '../components/dashboard/RoadmapSection'
 import NextStepsCard from '../components/dashboard/NextStepsCard'
@@ -43,7 +44,7 @@ export default function DashboardPage({ result, onBack, onNavigate, activeView =
   // The role catalogue comes from the backend so the UI never hardcodes a list.
   useEffect(() => {
     let active = true
-    fetch('/api/evaluate/roles')
+    fetch(apiUrl('/api/evaluate/roles'))
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
         if (active && payload?.roles) setRoles(payload.roles)
@@ -61,7 +62,7 @@ export default function DashboardPage({ result, onBack, onNavigate, activeView =
       setLoading(true)
       setError(null)
       try {
-        const response = await fetch('/api/evaluate/dashboard', {
+        const response = await fetch(apiUrl('/api/evaluate/dashboard'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ targetRole: role, skills }),

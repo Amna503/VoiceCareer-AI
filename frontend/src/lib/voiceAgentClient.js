@@ -9,10 +9,14 @@
  * GET /api/voice-agent/token is used.
  */
 
+import { apiUrl } from "./api.js";
+
 const WS_URL = "wss://agents.assemblyai.com/v1/ws";
-const TOKEN_ENDPOINT = "/api/voice-agent/token";
-const CONFIG_ENDPOINT = "/api/voice-agent/config";
-const TOOL_ENDPOINT = "/api/voice-agent/tools";
+// Routed through apiUrl so a deployed build reaches the Railway backend
+// instead of the Vercel origin, where these paths would 404.
+const TOKEN_ENDPOINT = apiUrl("/api/voice-agent/token");
+const CONFIG_ENDPOINT = apiUrl("/api/voice-agent/config");
+const TOOL_ENDPOINT = apiUrl("/api/voice-agent/tools");
 const WORKLET_URL = "/pcm-worklet.js";
 
 /** Audio format the Voice Agent API expects. */
