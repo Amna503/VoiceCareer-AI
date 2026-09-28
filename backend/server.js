@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import voiceRoutes from "./routes/voice.js";
+import voiceAgentRoutes, { handleMintToken } from "./routes/voiceAgent.js";
 import careerRoutes from "./routes/career.js";
 import interviewRoutes from "./routes/interview.js";
 import evaluationRoutes from "./routes/evaluation.js";
@@ -14,6 +15,9 @@ app.use(express.json({ limit: "10mb" }));
 
 // API Routes
 app.use("/api/voice", voiceRoutes);
+app.use("/api/voice-agent", voiceAgentRoutes);
+// Flat alias so the browser client can call GET /api/voice-token directly.
+app.get("/api/voice-token", handleMintToken);
 app.use("/api/career", careerRoutes);
 app.use("/api/interview", interviewRoutes);
 app.use("/api/evaluate", evaluationRoutes);
@@ -29,10 +33,18 @@ app.get("/api", (_req, res) => {
     name: "VoiceCareer AI API",
     version: "1.0.0",
     endpoints: {
+      voiceAgent: {
+        "GET /api/voice-token": "Mint a short-lived AssemblyAI Voice Agent token (alias)",
+        "GET /api/voice-agent/token": "Mint a short-lived AssemblyAI Voice Agent token",
+        "GET /api/voice-agent/config": "Get the inline session.update config for the interview agent",
+        "POST /api/voice-agent/tools": "Execute a voice agent tool call against ai/ modules",
+        "GET /api/voice-agent/session/:sessionId": "Get stored transcript for a voice session",
+        "DELETE /api/voice-agent/session/:sessionId": "Clear a voice session"
+      },
       voice: {
         "POST /api/voice/process": "Process voice input and get AI response",
         "POST /api/voice/process-text": "Process text input and get AI response",
-        "GET /api/voice/token": "Get a short-lived live streaming token"
+        "GET /api/voice/token": "Get a short-lived Universal-Streaming (v3) token"
       },
       career: {
         "POST /api/career/start": "Start career discovery conversation",
@@ -52,6 +64,8 @@ app.get("/api", (_req, res) => {
         "POST /api/evaluate/skill-gaps": "Analyze skill gaps",
         "POST /api/evaluate/roadmap": "Generate career roadmap",
         "POST /api/evaluate/complete": "Generate complete analysis",
+        "POST /api/evaluate/dashboard": "Skill gaps + roadmap for a role, no transcript needed",
+        "GET /api/evaluate/roles": "Roles the career engine can assess",
         "GET /api/evaluate/:sessionId": "Get stored evaluation"
       }
     }

@@ -1,13 +1,22 @@
 /**
  * Evaluation Routes
  * Handles interview evaluation, skill gap analysis, and roadmap generation.
+ *
+ * Every route runs the same pipeline, so the dashboard and the voice agent can
+ * never disagree about a candidate's plan:
+ *
+ *   target role + job description
+ *     -> role requirements   (ai/career-engine/roleCatalog.js)
+ *     -> candidate skills
+ *     -> prioritised gaps    (ai/career-engine/skillGap.js)
+ *     -> interview evaluation(ai/evaluation + CoachAgent)
+ *     -> 30-day roadmap      (ai/career-engine/roadmap.js, enriched by CoachAgent)
  */
 
 import { Router } from "express";
 import { CoachAgent } from "../../ai/agents/coachAgent.js";
 import { LLMService } from "../../ai/llmService.js";
-import { analyzeSkillGaps } from "../../ai/career-engine/skillGap.js";
-import { generateRoadmap } from "../../ai/career-engine/roadmap.js";
+import { CAREER_ROLE_REQUIREMENTS, getRoleRequirements } from "../../ai/career-engine/skillGap.js";
 import { formatEvaluationReport } from "../../ai/evaluation/evaluator.js";
 
 const router = Router();
@@ -15,13 +24,50 @@ const router = Router();
 // In-memory evaluation store
 const evaluations = new Map();
 
+function toStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value.split(/[,;]/).map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+/** Read the analysis inputs out of a request body, accepting both nested and flat forms. */
+function readContext(body = {}) {
+  const profile = body.candidateProfile || null;
+  return {
+    candidateProfile: profile,
+    targetRole: body.targetRole || profile?.careerGoal || "general",
+    jobDescription: body.jobDescription || profile?.jobDescription || "",
+    experience: body.experience || body.experienceLevel || profile?.experience || null,
+    currentSkills: toStringArray(body.skills || body.currentSkills || profile?.skills),
+    mode: body.mode,
+  };
+}
+
+/** Compact dashboard payload so the React side renders backend data, never literals. */
+function toDashboardPayload({ evaluation, skillGaps, roadmap, targetRole, mode }) {
+  return {
+    targetRole,
+    targetRoleTitle: roadmap.targetRoleTitle || skillGaps.targetRoleTitle,
+    mode: mode || null,
+    evaluation: evaluation || null,
+    skillGaps: skillGaps || null,
+    roadmap: roadmap || null,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 /**
  * POST /api/evaluate/interview
  * Evaluate an interview based on conversation history
  */
 router.post("/interview", async (req, res) => {
   try {
-    const { sessionId, interviewHistory, candidateProfile, targetRole } = req.body;
+    const { sessionId, interviewHistory } = req.body;
+    const context = readContext(req.body);
 
     if (!interviewHistory || !Array.isArray(interviewHistory)) {
       return res.status(400).json({ error: "Interview history is required" });
@@ -30,7 +76,7 @@ router.post("/interview", async (req, res) => {
     const llm = new LLMService();
     const coach = new CoachAgent(llm);
 
-    const evaluation = await coach.evaluateInterview(interviewHistory, candidateProfile);
+    const evaluation = await coach.evaluateInterview(interviewHistory, context.candidateProfile);
     const report = formatEvaluationReport(evaluation);
 
     // Store evaluation
@@ -38,8 +84,8 @@ router.post("/interview", async (req, res) => {
       evaluations.set(sessionId, {
         evaluation,
         report,
-        candidateProfile,
-        targetRole,
+        candidateProfile: context.candidateProfile,
+        targetRole: context.targetRole,
         evaluatedAt: new Date().toISOString()
       });
     }
@@ -56,33 +102,45 @@ router.post("/interview", async (req, res) => {
 
 /**
  * POST /api/evaluate/skill-gaps
- * Analyze skill gaps for a candidate
+ * Analyze skill gaps for a candidate against a specific target role
  */
 router.post("/skill-gaps", async (req, res) => {
   try {
-    const { candidateProfile, targetRole, interviewHistory } = req.body;
+    const context = readContext(req.body);
 
-    if (!targetRole) {
+    if (!req.body.targetRole) {
       return res.status(400).json({ error: "Target role is required" });
     }
 
-    // Use local skill gap analysis first
-    const currentSkills = candidateProfile?.skills || [];
-    const localAnalysis = analyzeSkillGaps(currentSkills, targetRole);
+    const requirements = getRoleRequirements(context.targetRole, {
+      jobDescription: context.jobDescription,
+    });
 
-    // Enhance with LLM if available
-    let enhancedAnalysis = localAnalysis;
-    try {
-      const llm = new LLMService();
-      const coach = new CoachAgent(llm);
-      enhancedAnalysis = await coach.analyzeSkillGaps(candidateProfile, targetRole, null);
-    } catch (llmError) {
-      console.log("LLM enhancement failed, using local analysis:", llmError.message);
-    }
+    const llm = new LLMService();
+    const coach = new CoachAgent(llm);
+
+    // The career engine decides which skills are gaps and in what order; the LLM
+    // only enriches each one. There is no role-agnostic path.
+    const skillGaps = await coach.analyzeGaps(
+      context.currentSkills.length
+        ? { skills: context.currentSkills }
+        : context.candidateProfile,
+      context.targetRole,
+      {
+        jobDescription: context.jobDescription,
+        experience: context.experience,
+      }
+    );
 
     res.json({
-      skillGaps: enhancedAnalysis,
-      localAnalysis
+      skillGaps,
+      roleRequirements: {
+        role: requirements.roleKey,
+        title: requirements.title,
+        critical: requirements.critical,
+        important: requirements.important,
+        niceToHave: requirements.niceToHave,
+      }
     });
   } catch (error) {
     console.error("Skill gap analysis error:", error.message);
@@ -92,34 +150,33 @@ router.post("/skill-gaps", async (req, res) => {
 
 /**
  * POST /api/evaluate/roadmap
- * Generate a personalized career roadmap
+ * Generate a personalized 30-day roadmap for a role and skill set.
  */
 router.post("/roadmap", async (req, res) => {
   try {
-    const { candidateProfile, skillGaps, targetRole } = req.body;
+    const context = readContext(req.body);
 
-    if (!targetRole) {
+    if (!req.body.targetRole) {
       return res.status(400).json({ error: "Target role is required" });
     }
 
-    // Use local roadmap generation
-    const currentSkills = candidateProfile?.skills || [];
-    const localSkillGaps = skillGaps || analyzeSkillGaps(currentSkills, targetRole);
-    const roadmap = generateRoadmap(targetRole, localSkillGaps);
+    const llm = new LLMService();
+    const coach = new CoachAgent(llm);
 
-    // Enhance with LLM if available
-    let enhancedRoadmap = roadmap;
-    try {
-      const llm = new LLMService();
-      const coach = new CoachAgent(llm);
-      enhancedRoadmap = await coach.generateRoadmap(candidateProfile, localSkillGaps, targetRole);
-    } catch (llmError) {
-      console.log("LLM enhancement failed, using local roadmap:", llmError.message);
-    }
+    const roadmap = await coach.buildRoadmap(
+      { skills: context.currentSkills },
+      context.targetRole,
+      {
+        jobDescription: context.jobDescription,
+        experience: context.experience,
+        skillGaps: req.body.skillGaps || undefined,
+      }
+    );
 
     res.json({
-      roadmap: enhancedRoadmap,
-      localRoadmap: roadmap
+      roadmap,
+      // Convenience: the gaps the roadmap was actually built from.
+      skillGaps: req.body.skillGaps || undefined
     });
   } catch (error) {
     console.error("Roadmap generation error:", error.message);
@@ -133,7 +190,8 @@ router.post("/roadmap", async (req, res) => {
  */
 router.post("/complete", async (req, res) => {
   try {
-    const { sessionId, interviewHistory, candidateProfile, targetRole } = req.body;
+    const { sessionId, interviewHistory } = req.body;
+    const context = readContext(req.body);
 
     if (!interviewHistory || !Array.isArray(interviewHistory)) {
       return res.status(400).json({ error: "Interview history is required" });
@@ -142,10 +200,22 @@ router.post("/complete", async (req, res) => {
     const llm = new LLMService();
     const coach = new CoachAgent(llm);
 
+    // readContext accepts `skills` flat or nested, but the coach reads skills from
+    // the profile. Fold them in so an explicitly supplied skill list is never
+    // silently dropped (which would report every role skill as a gap).
+    const candidateProfile = context.currentSkills.length
+      ? { ...(context.candidateProfile || {}), skills: context.currentSkills }
+      : context.candidateProfile;
+
     const analysis = await coach.generateCompleteAnalysis(
       interviewHistory,
       candidateProfile,
-      targetRole
+      context.targetRole,
+      {
+        jobDescription: context.jobDescription,
+        experience: context.experience,
+        mode: context.mode,
+      }
     );
 
     const report = formatEvaluationReport(analysis.evaluation);
@@ -162,12 +232,79 @@ router.post("/complete", async (req, res) => {
     res.json({
       evaluation: report,
       skillGaps: analysis.skillGaps,
-      roadmap: analysis.roadmap
+      roadmap: analysis.roadmap,
+      dashboard: toDashboardPayload({
+        evaluation: report,
+        skillGaps: analysis.skillGaps,
+        roadmap: analysis.roadmap,
+        targetRole: context.targetRole,
+        mode: context.mode,
+      })
     });
   } catch (error) {
     console.error("Complete analysis error:", error.message);
     res.status(500).json({ error: error.message || "Failed to generate complete analysis" });
   }
+});
+
+/**
+ * POST /api/evaluate/dashboard
+ * Roadmap + skill gaps for a role, with no interview transcript required.
+ * Lets the dashboard render a real backend-generated plan on first load.
+ */
+router.post("/dashboard", async (req, res) => {
+  try {
+    const context = readContext(req.body);
+
+    if (!req.body.targetRole) {
+      return res.status(400).json({ error: "Target role is required" });
+    }
+
+    const llm = new LLMService();
+    const coach = new CoachAgent(llm);
+
+    const skillGaps = await coach.analyzeGaps(
+      { skills: context.currentSkills },
+      context.targetRole,
+      { jobDescription: context.jobDescription, experience: context.experience }
+    );
+
+    const roadmap = await coach.buildRoadmap(
+      { skills: context.currentSkills },
+      context.targetRole,
+      { jobDescription: context.jobDescription, experience: context.experience, skillGaps }
+    );
+
+    res.json(
+      toDashboardPayload({
+        skillGaps,
+        roadmap,
+        targetRole: context.targetRole,
+        mode: context.mode,
+      })
+    );
+  } catch (error) {
+    console.error("Dashboard analysis error:", error.message);
+    res.status(500).json({ error: error.message || "Failed to build dashboard analysis" });
+  }
+});
+
+/**
+ * GET /api/evaluate/roles
+ * The roles the career engine has structured requirements for, so the UI never
+ * has to hardcode a role list.
+ */
+router.get("/roles", (_req, res) => {
+  res.json({
+    roles: Object.entries(CAREER_ROLE_REQUIREMENTS).map(([key, role]) => ({
+      key,
+      title: role.title,
+      family: role.family,
+      aliases: role.aliases || [],
+      skillCount:
+        (role.critical?.length || 0) + (role.important?.length || 0) + (role.niceToHave?.length || 0),
+    })),
+  });
 });
 
 /**

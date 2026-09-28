@@ -7,8 +7,11 @@ const router = Router();
 
 /**
  * GET /api/voice/token
- * Mint a short-lived AssemblyAI streaming token.
- * Keeps the permanent API key server-side for browser live transcription.
+ * Mint a short-lived AssemblyAI Universal-Streaming (v3) token.
+ * Keeps the permanent API key server-side for the legacy live-transcription
+ * client in frontend/src/lib/realtimeTranscriber.js.
+ *
+ * The Voice Agent flow uses its own endpoint instead: GET /api/voice-token.
  */
 router.get("/token", async (_req, res) => {
   try {
@@ -32,10 +35,12 @@ router.get("/token", async (_req, res) => {
     const data = await response.json();
     res.json({ token: data.token, expiresIn: data.expires_in_seconds });
   } catch (error) {
-    console.error("Streaming token error:", error.message);
-    res.status(500).json({ error: error.message || "Failed to create streaming token" });
+    console.error("Text processing error:", error.message);
+    res.status(500).json({ error: error.message || "Failed to process text input" });
   }
 });
+
+export default router;
 
 router.post("/process", async (req, res) => {
   try {
@@ -89,8 +94,6 @@ router.post("/process", async (req, res) => {
     });
   }
 });
-
-export default router;
 
 /**
  * POST /api/voice/process-text

@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test:roadmap": "node scripts/verifyDynamicRoadmap.js"
   },
   "dependencies": {
     "assemblyai": "^4.30.0",

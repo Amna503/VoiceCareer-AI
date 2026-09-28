@@ -1,0 +1,15 @@
+{
+  "name": "voicecareer-ai-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Agents, prompts, evaluation and career engine. No runtime dependencies — imported directly by backend/.",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./agents/*": "./agents/*",
+    "./prompts/*": "./prompts/*",
+    "./evaluation/*": "./evaluation/*",
+    "./career-engine/*": "./career-engine/*"
+  }
+}

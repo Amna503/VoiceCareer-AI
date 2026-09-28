@@ -2,7 +2,23 @@
  * Career Coach Agent
  * Evaluates interview performance, provides feedback, identifies skill gaps,
  * and generates personalized career roadmaps.
+ *
+ * Division of responsibility:
+ *   - ai/career-engine decides WHICH skills are gaps, in WHAT order they should
+ *     be worked on, and WHICH role they belong to. That is deterministic and
+ *     role-specific.
+ *   - This agent's LLM calls only ENRICH that decision with better wording,
+ *     concrete examples and role-specific nuance. It never invents the gap list
+ *     and it never returns a plan that ignores the requested role.
  */
+
+import {
+  analyzeSkillGaps,
+  getRoleRequirements,
+  resolveRole,
+  skillsMatch,
+} from "../career-engine/skillGap.js";
+import { generateRoadmap, normaliseWeek, WEEK_COUNT } from "../career-engine/roadmap.js";
 
 const COACH_EVALUATION_PROMPT = `You are VoiceCareer AI's Career Coach Agent. Your job is to evaluate interview performance and provide constructive, actionable feedback.
 
@@ -12,7 +28,7 @@ EVALUATION CRITERIA:
 3. COMMUNICATION CLARITY — Was their answer clear and well-structured?
 4. PROBLEM SOLVING — Did they demonstrate logical thinking?
 5. CONFIDENCE — Did they speak with confidence and conviction?
-5. FOLLOW-UP HANDLING — How well did they handle follow-up questions?
+6. FOLLOW-UP HANDLING — How well did they handle follow-up questions?
 
 RULES:
 - Be constructive and specific — not generic
@@ -20,6 +36,7 @@ RULES:
 - Provide actionable improvement suggestions
 - Balance positive feedback with areas for growth
 - Keep the tone supportive and encouraging
+- Judge technical knowledge against the role the interview was for
 
 OUTPUT FORMAT:
 Return a JSON object with this structure:
@@ -38,60 +55,101 @@ Return a JSON object with this structure:
   "detailedFeedback": "string"
 }`;
 
-const SKILL_GAP_PROMPT = `You are VoiceCareer AI's Skill Gap Analyst. Compare the candidate's current skills against the requirements of their target career role.
+const SKILL_GAP_PROMPT = `You are VoiceCareer AI's Skill Gap Analyst.
 
-INPUT:
-- Current skills from the career profile
-- Target career role
-- Interview performance data
+You are given the authoritative list of skill gaps that has ALREADY been computed
+for the candidate's target role. Do not decide the gap list yourself. For each gap
+you are given, add a realistic current level and one concrete improvement action.
 
 OUTPUT FORMAT:
 Return a JSON object:
 {
-  "targetRole": "string",
-  "currentSkills": [
-    { "skill": "string", "level": "beginner|intermediate|advanced", "evidence": "string" }
-  ],
-  "requiredSkills": [
-    { "skill": "string", "importance": "critical|important|nice-to-have", "description": "string" }
-  ],
   "gaps": [
-    { "skill": "string", "importance": "critical|important|nice-to-have", "currentLevel": "string", "suggestedImprovement": "string" }
+    { "skill": "string", "currentLevel": "beginner|intermediate|advanced", "suggestedImprovement": "string" }
   ],
-  "matchedSkills": ["string"],
   "summary": "string"
-}`;
+}
 
-const ROADMAP_PROMPT = `You are VoiceCareer AI's Career Roadmap Generator. Create a personalized, actionable career roadmap based on the candidate's profile, skill gaps, and career goals.
+Use exactly the "skill" strings you were given so the results can be matched back.`;
 
-GUIDELINES:
-- Create a 30-day roadmap (4 weeks)
-- Each week should have a clear focus area
-- Include specific learning resources, projects, and practice activities
-- Prioritize skill gaps that are most critical for the target role
-- Include both learning and practice activities
-- End with interview preparation and portfolio building
-- Be specific — not generic advice
+const ROADMAP_PROMPT = `You are VoiceCareer AI's Career Roadmap Generator.
+
+You are given a target role and an ordered list of that candidate's skill gaps. The
+weeks have already been allocated to those gaps by the career engine. Your job is to
+write each week well.
+
+ABSOLUTE RULES:
+- Write ONLY about skills from the list you were given. Never add a skill that is
+  not in that list, and never produce a generic plan that would fit any role.
+- Weeks 1-3 must focus on their assigned gap skills. Week 4 proves the work and
+  prepares the candidate for a <ROLE> interview.
+- Every task must be specific to <ROLE>: real tools, real commands, real artefacts.
+- Match the depth to the candidate's experience level.
+- If the candidate is already strong in something, do NOT schedule time to relearn it.
 
 OUTPUT FORMAT:
 Return a JSON object:
 {
-  "roadmap": [
+  "weeks": [
     {
       "week": number,
       "focus": "string",
+      "gapTargets": ["string"],
       "goals": ["string"],
-      "activities": [
+      "tasks": [
         { "type": "learn|practice|project|review", "title": "string", "description": "string", "duration": "string" }
       ],
-      "milestone": "string"
+      "project": { "title": "string", "description": "string" },
+      "outcome": "string"
     }
-  ],
-  "totalHours": number,
-  "keyResources": [
-    { "name": "string", "type": "course|article|tool|practice", "url": "string or null" }
   ]
 }`;
+
+function extractProfile(profile) {
+  if (!profile) return {};
+  if (Array.isArray(profile)) return { skills: profile };
+  if (Array.isArray(profile.skills)) return profile;
+  if (typeof profile.skills === "string") return { ...profile, skills: [profile.skills] };
+  return profile;
+}
+
+function toStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value.split(/[,;]/).map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function parseJsonObject(text) {
+  if (typeof text !== "string") return null;
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end <= start) return null;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+/** Role-aware context block so no prompt is ever role-agnostic. */
+function roleContextBlock(targetRole, jobDescription) {
+  const requirements = getRoleRequirements(targetRole, { jobDescription });
+  const lines = [
+    `TARGET ROLE: ${requirements.title}`,
+    `ROLE ALIAS MATCHED: ${requirements.roleKey}${requirements.roleResolved ? "" : " (inferred from the job description — not a named preset role)"}`,
+    `CRITICAL SKILLS FOR THIS ROLE: ${requirements.critical.map((item) => item.skill).join(", ") || "n/a"}`,
+    `IMPORTANT SKILLS FOR THIS ROLE: ${requirements.important.map((item) => item.skill).join(", ") || "n/a"}`,
+    `NICE-TO-HAVE SKILLS FOR THIS ROLE: ${requirements.niceToHave.map((item) => item.skill).join(", ") || "n/a"}`,
+  ];
+  if (jobDescription) {
+    lines.push(`JOB DESCRIPTION:\n${jobDescription}`);
+  }
+  return { requirements, block: lines.join("\n") };
+}
 
 export class CoachAgent {
   constructor(llmService) {
@@ -117,21 +175,18 @@ Provide your evaluation as a JSON object following the specified format.`;
       { role: "user", content: prompt }
     ];
 
+    // Reasoning models (e.g. gpt-oss) spend part of max_tokens on reasoning
+    // tokens, so a budget that looks generous for the JSON alone can still
+    // truncate the response and break parsing.
     const response = await this.llm.generate(messages, {
-      maxTokens: 800,
+      maxTokens: 2500,
       temperature: 0.3
     });
 
-    try {
-      const jsonStart = response.indexOf("{");
-      const jsonEnd = response.lastIndexOf("}") + 1;
-      if (jsonStart !== -1 && jsonEnd > jsonStart) {
-        return JSON.parse(response.substring(jsonStart, jsonEnd));
-      }
-    } catch (e) {
-      console.error("Failed to parse evaluation JSON:", e);
-    }
+    const parsed = parseJsonObject(response);
+    if (parsed && parsed.evaluation) return parsed;
 
+    console.error("Failed to parse evaluation JSON");
     return {
       overallScore: 5,
       evaluation: {
@@ -148,92 +203,269 @@ Provide your evaluation as a JSON object following the specified format.`;
     };
   }
 
-  async analyzeSkillGaps(candidateProfile, targetRole, evaluation) {
-    const prompt = `Analyze skill gaps for this candidate:
+  /**
+   * LLM enrichment for an ALREADY computed gap list. Returns {} on any problem
+   * so the caller can fall back to the deterministic gaps.
+   */
+  async enrichSkillGaps(engineGaps, targetRole, context = {}) {
+    const { block } = roleContextBlock(targetRole, context.jobDescription);
+    const list = engineGaps.map((gap) => `- ${gap.skill} (${gap.importance}): ${gap.description}`);
 
-CANDIDATE PROFILE: ${JSON.stringify(candidateProfile || {})}
-TARGET ROLE: ${targetRole}
-INTERVIEW EVALUATION: ${JSON.stringify(evaluation || {})}
+    if (!list.length) return {};
 
-Provide your analysis as a JSON object following the specified format.`;
+    const prompt = `${block}
 
-    const messages = [
-      { role: "system", content: SKILL_GAP_PROMPT },
-      { role: "user", content: prompt }
-    ];
+CANDIDATE SKILLS THEY ALREADY HAVE: ${(context.currentSkills || []).join(", ") || "none recorded"}
+EXPERIENCE LEVEL: ${context.experienceLevel?.label || "unspecified"}
+SKILL GAPS TO ENRICH (this list is final — do not add, remove, or rename entries):
+${list.join("\n")}
 
-    const response = await this.llm.generate(messages, {
-      maxTokens: 800,
-      temperature: 0.3
-    });
+INTERVIEW EVALUATION (weaknesses to weight towards):
+${JSON.stringify(context.evaluation?.summary || context.evaluation || {})}
+
+Add a currentLevel and a concrete suggestedImprovement to each gap, and write a one-sentence summary.`;
 
     try {
-      const jsonStart = response.indexOf("{");
-      const jsonEnd = response.lastIndexOf("}") + 1;
-      if (jsonStart !== -1 && jsonEnd > jsonStart) {
-        return JSON.parse(response.substring(jsonStart, jsonEnd));
-      }
-    } catch (e) {
-      console.error("Failed to parse skill gap JSON:", e);
+      const response = await this.llm.generate(
+        [
+          { role: "system", content: SKILL_GAP_PROMPT },
+          { role: "user", content: prompt }
+        ],
+        { maxTokens: 1500, temperature: 0.3 }
+      );
+      return parseJsonObject(response) || {};
+    } catch (error) {
+      console.warn("Skill gap LLM enrichment failed:", error.message);
+      return {};
     }
+  }
 
-    return {
+  /**
+   * Authoritative skill gaps: the career engine decides the list and ordering,
+   * the LLM only adds per-gap detail.
+   */
+  async analyzeGaps(candidateProfile, targetRole, context = {}) {
+    const profile = extractProfile(candidateProfile);
+    const jobDescription = context.jobDescription || profile.jobDescription || "";
+    const experience = context.experience || profile.experience || null;
+
+    const engine = analyzeSkillGaps(toStringArray(profile.skills), targetRole, {
+      jobDescription,
+      experience,
+      evaluation: context.evaluation || null,
+    });
+
+    const enrichment = await this.enrichSkillGaps(
+      engine.gaps,
       targetRole,
-      currentSkills: [],
-      requiredSkills: [],
-      gaps: [],
-      matchedSkills: [],
-      summary: "Unable to generate skill gap analysis at this time."
-    };
-  }
+      {
+        ...context,
+        jobDescription,
+        experienceLevel: engine.experienceLevel,
+        currentSkills: engine.currentSkills,
+      }
+    );
 
-  async generateRoadmap(candidateProfile, skillGaps, targetRole) {
-    const prompt = `Generate a personalized 30-day career roadmap:
-
-CANDIDATE PROFILE: ${JSON.stringify(candidateProfile || {})}
-TARGET ROLE: ${targetRole}
-SKILL GAPS: ${JSON.stringify(skillGaps || {})}
-
-Create an actionable roadmap with specific weekly goals, activities, and milestones.
-
-Provide your roadmap as a JSON object following the specified format.`;
-
-    const messages = [
-      { role: "system", content: ROADMAP_PROMPT },
-      { role: "user", content: prompt }
-    ];
-
-    const response = await this.llm.generate(messages, {
-      maxTokens: 1200,
-      temperature: 0.4
+    const llmGaps = Array.isArray(enrichment.gaps) ? enrichment.gaps : [];
+    const gaps = engine.gaps.map((gap) => {
+      const match = llmGaps.find(
+        (item) => typeof item?.skill === "string" && skillsMatch(item.skill, gap.skill)
+      );
+      if (!match) return gap;
+      return {
+        ...gap,
+        currentLevel: match.currentLevel || gap.currentLevel,
+        suggestedImprovement: match.suggestedImprovement || gap.suggestedImprovement,
+      };
     });
 
-    try {
-      const jsonStart = response.indexOf("{");
-      const jsonEnd = response.lastIndexOf("}") + 1;
-      if (jsonStart !== -1 && jsonEnd > jsonStart) {
-        return JSON.parse(response.substring(jsonStart, jsonEnd));
-      }
-    } catch (e) {
-      console.error("Failed to parse roadmap JSON:", e);
-    }
-
     return {
-      roadmap: [],
-      totalHours: 0,
-      keyResources: []
+      ...engine,
+      gaps,
+      source: llmGaps.length > 0 ? "career-engine+llm" : "career-engine",
+      summary: enrichment.summary || engine.summary,
     };
   }
 
-  async generateCompleteAnalysis(interviewHistory, candidateProfile, targetRole) {
-    const evaluation = await this.evaluateInterview(interviewHistory, candidateProfile);
-    const skillGaps = await this.analyzeSkillGaps(candidateProfile, targetRole, evaluation);
-    const roadmap = await this.generateRoadmap(candidateProfile, skillGaps, targetRole);
+  /** Legacy entry point kept for the existing call sites. */
+  async analyzeSkillGaps(candidateProfile, targetRole, evaluation) {
+    return this.analyzeGaps(candidateProfile, targetRole, { evaluation });
+  }
+
+  /**
+   * LLM enrichment for the engine's 4 weeks. A returned week is only accepted if
+   * it sticks to the skills the engine allocated to it, so a drifting or generic
+   * model can never turn a role-specific plan into a universal one.
+   */
+  async enrichRoadmap(engineRoadmap, context = {}) {
+    const { block } = roleContextBlock(context.targetRole, context.jobDescription);
+    const role = engineRoadmap.targetRole;
+
+    const allowed = [...new Set(engineRoadmap.weeks.flatMap((week) => week.gapTargets || []))];
+    const allowance = allowed.length ? allowed : [role];
+
+    const weekBrief = engineRoadmap.weeks
+      .map(
+        (week) =>
+          `Week ${week.week} (${week.kind}) — allocated skills: ${(week.gapTargets || []).join(", ") || role}\n  engine focus: ${week.focus}`
+      )
+      .join("\n");
+
+    const prompt = `${block}
+
+EXPERIENCE LEVEL: ${engineRoadmap.experienceLevel?.label || "unspecified"}
+ROLE: ${role}
+
+CANDIDATE ALREADY HAS: ${(context.currentSkills || engineRoadmap.matchedSkills || []).join(", ") || "nothing recorded"}
+CANDIDATE SKILL GAPS, HIGHEST PRIORITY FIRST: ${engineRoadmap.prioritizedSkills.join(", ") || "none — this plan is about depth and interview readiness"}
+
+THE ENGINE HAS ALREADY ALLOCATED SKILLS TO WEEKS:
+${weekBrief}
+
+You may ONLY use these skills in the plan: ${allowance.join(", ")}
+
+For "gapTargets" copy the allocated skill names EXACTLY as written above — do not
+expand them into sub-topics (for example output "Python", never
+"Advanced Python syntax (list comprehensions)"). Put any sub-topic detail in the
+task description instead.
+
+Rewrite the ${WEEK_COUNT} weeks so they are specific to a ${role}. Keep the same week number and the same allocated skills per week.`;
+
+    try {
+      const response = await this.llm.generate(
+        [
+          { role: "system", content: ROADMAP_PROMPT },
+          { role: "user", content: prompt }
+        ],
+        { maxTokens: 3000, temperature: 0.4 }
+      );
+
+      const parsed = parseJsonObject(response);
+      const weeks = Array.isArray(parsed?.weeks) ? parsed.weeks : Array.isArray(parsed?.roadmap) ? parsed.roadmap : null;
+      if (!weeks || !weeks.length) return new Map();
+
+      const byNumber = new Map();
+      for (const week of weeks) {
+        const number = Number(week?.week);
+        if (Number.isFinite(number)) byNumber.set(number, week);
+      }
+      return byNumber;
+    } catch (error) {
+      console.warn("Roadmap LLM enrichment failed:", error.message);
+      return new Map();
+    }
+  }
+
+  /**
+   * The roadmap every surface (dashboard and voice agent) should use.
+   * Career engine decides the plan; the LLM improves the wording; if the LLM
+   * drifts or fails, the role-specific engine plan is returned unchanged.
+   */
+  async buildRoadmap(candidateProfile, targetRole, context = {}) {
+    const profile = extractProfile(candidateProfile);
+    const jobDescription = context.jobDescription || profile.jobDescription || "";
+    const experience = context.experience || profile.experience || null;
+    const skillGaps = context.skillGaps || (await this.analyzeGaps(profile, targetRole, { ...context, jobDescription, experience }));
+
+    const engineRoadmap = generateRoadmap(targetRole, skillGaps, { jobDescription, experience, evaluation: context.evaluation });
+
+    const llmWeeks = await this.enrichRoadmap(engineRoadmap, {
+      ...context,
+      jobDescription,
+      currentSkills: skillGaps.currentSkills || [],
+    });
+
+    // Enrichment is optional; the engine plan is always usable as-is.
+    const enrichments = llmWeeks instanceof Map ? llmWeeks : new Map();
+    const source = enrichments.size ? "career-engine+llm" : "career-engine";
+    const rejected = [];
+    const adjusted = [];
+
+    const weeks = engineRoadmap.weeks.map((engineWeek, index) => {
+      const base = normaliseWeek(engineWeek, index, engineRoadmap);
+      const llmWeek = enrichments.get(base.week);
+      if (!llmWeek) return base;
+
+      // Guard 1: the LLM may only work with skills the engine allocated.
+      // Models often re-label a skill with a sub-topic ("Advanced Python syntax"),
+      // so drop the off-plan labels and keep the engine's own names instead of
+      // discarding an otherwise good week.
+      const proposed = toStringArray(llmWeek.gapTargets || llmWeek.skills);
+      const onPlan = proposed.filter((skill) =>
+        base.gapTargets.some((allowed) => skillsMatch(skill, allowed))
+      );
+      const offPlan = proposed.filter((skill) => !onPlan.includes(skill));
+      const gapTargets = onPlan.length ? onPlan : base.gapTargets;
+      if (offPlan.length) {
+        adjusted.push({ week: base.week, offPlan, used: gapTargets });
+      }
+
+      // Guard 2: an enriched week must still be non-empty and mention its skills.
+      const candidate = normaliseWeek(
+        {
+          ...llmWeek,
+          week: base.week,
+          kind: base.kind,
+          gapTargets,
+        },
+        index,
+        engineRoadmap
+      );
+
+      if (!candidate.tasks.length && !candidate.goals.length) {
+        rejected.push({ week: base.week, reason: "empty" });
+        return base;
+      }
+      if (!candidate.skills.length) candidate.skills = base.skills;
+      if (!candidate.outcome) candidate.outcome = base.outcome;
+      if (!candidate.milestone) candidate.milestone = base.milestone;
+      if (!candidate.project) candidate.project = base.project;
+
+      return candidate;
+    });
+
+    return {
+      ...engineRoadmap,
+      weeks,
+      roadmap: weeks,
+      totalHours: weeks.reduce((sum, week) => sum + (week.hours || 0), 0),
+      source,
+      rejectedWeeks: rejected,
+      adjustedWeeks: adjusted,
+      // Explicitly state what produced this plan so the UI and the voice agent
+      // can never claim a roadmap that was not generated for this role.
+      generatedForRole: engineRoadmap.targetRole,
+    };
+  }
+
+  /** Legacy entry point kept for the existing call sites. */
+  async generateRoadmap(candidateProfile, skillGaps, targetRole) {
+    return this.buildRoadmap(candidateProfile, targetRole, { skillGaps });
+  }
+
+  async generateCompleteAnalysis(interviewHistory, candidateProfile, targetRole, context = {}) {
+    const profile = extractProfile(candidateProfile);
+    const evaluation = await this.evaluateInterview(interviewHistory, profile);
+
+    // When the candidate never filled in a skill list, the transcript is the
+    // source: the engine looks for role skills they actually mentioned.
+    const skillGaps = await this.analyzeGaps(profile, targetRole, {
+      ...context,
+      evaluation,
+      interviewHistory,
+    });
+
+    const roadmap = await this.buildRoadmap(profile, targetRole, {
+      ...context,
+      evaluation,
+      skillGaps,
+    });
 
     return {
       evaluation,
       skillGaps,
-      roadmap
+      roadmap,
+      role: resolveRole(targetRole, context.jobDescription).key,
     };
   }
 }

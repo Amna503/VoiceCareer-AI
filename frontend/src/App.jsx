@@ -5,13 +5,23 @@ import DashboardPage from './pages/DashboardPage'
 function App() {
   const [showInterview, setShowInterview] = useState(false)
   const [showDashboard, setShowDashboard] = useState(false)
+  // The analysis the backend generated for this candidate. The dashboard renders
+  // from this — it never builds its own roadmap.
+  const [result, setResult] = useState(null)
 
   if (showDashboard) {
-    return <DashboardPage />
+    return <DashboardPage result={result} onBack={() => { setResult(null); setShowDashboard(false) }} />
   }
 
   if (showInterview) {
-    return <InterviewPage onFinish={() => setShowDashboard(true)} />
+    return (
+      <InterviewPage
+        onFinish={(payload) => {
+          setResult(payload)
+          setShowDashboard(true)
+        }}
+      />
+    )
   }
 
   return (

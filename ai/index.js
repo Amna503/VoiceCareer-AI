@@ -7,3 +7,11 @@ export { CareerAgent } from "./agents/careerAgent.js";
 export { InterviewAgent } from "./agents/interviewAgent.js";
 export { CoachAgent } from "./agents/coachAgent.js";
 export { LLMService } from "./llmService.js";
+export {
+  buildVoiceAgentSession,
+  buildVoiceAgentTools,
+  buildSystemPrompt,
+  buildGreeting,
+  VOICE_AGENT_SAMPLE_RATE,
+  SUPPORTED_ROLES,
+} from "./agents/voiceInterviewAgentConfig.js";

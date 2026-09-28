@@ -1,7 +1,20 @@
 /**
  * Career Engine Module
- * Skill gap analysis and career roadmap generation.
+ * Role requirements, skill gap analysis and dynamic roadmap generation.
  */
 
-export { CAREER_ROLE_REQUIREMENTS, getRoleRequirements, analyzeSkillGaps } from "./skillGap.js";
-export { ROADMAP_TEMPLATES, generateRoadmap } from "./roadmap.js";
+export {
+  CAREER_ROLE_REQUIREMENTS,
+  getRoleRequirements,
+  analyzeSkillGaps,
+  resolveRole,
+  extractJobDescriptionSkills,
+  skillsMatch,
+} from "./skillGap.js";
+export {
+  resolveRoleKey,
+  resolveExperienceLevel,
+  roleTitle,
+  SKILL_ALIASES,
+} from "./roleCatalog.js";
+export { WEEK_COUNT, generateRoadmap, normaliseWeek } from "./roadmap.js";
