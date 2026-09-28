@@ -18,3 +18,4 @@ export {
   SKILL_ALIASES,
 } from "./roleCatalog.js";
 export { WEEK_COUNT, generateRoadmap, normaliseWeek } from "./roadmap.js";
+export { buildNextSteps, NEXT_STEP_COUNT } from "./nextSteps.js";

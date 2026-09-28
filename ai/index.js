@@ -15,3 +15,16 @@ export {
   VOICE_AGENT_SAMPLE_RATE,
   SUPPORTED_ROLES,
 } from "./agents/voiceInterviewAgentConfig.js";
+
+// Evaluation, career intelligence and the chart data the dashboard renders.
+export {
+  EVALUATION_CRITERIA,
+  calculateOverallScore,
+  formatEvaluationReport,
+} from "./evaluation/index.js";
+export {
+  analyzeSkillGaps,
+  generateRoadmap,
+  buildNextSteps,
+} from "./career-engine/index.js";
+export { buildAnalytics, PERCENT_MAX } from "./analytics/index.js";

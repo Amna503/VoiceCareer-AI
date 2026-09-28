@@ -250,11 +250,20 @@ export function analyzeSkillGaps(currentSkills, targetRole, context = {}) {
 
   const gaps = [];
   const matched = [];
+  /** Requirement counts per importance band, so a coverage chart can read them. */
+  const bands = {
+    critical: { required: 0, matched: 0, gaps: 0 },
+    important: { required: 0, matched: 0, gaps: 0 },
+    "nice-to-have": { required: 0, matched: 0, gaps: 0 },
+  };
 
   allRequirements.forEach((req, index) => {
     const isMatched = statedSkills.some((skill) => skillsMatch(skill, req.skill));
+    const band = bands[req.importance] || bands.important;
+    band.required += 1;
 
     if (isMatched) {
+      band.matched += 1;
       matched.push(req.skill);
       return;
     }
@@ -277,6 +286,7 @@ export function analyzeSkillGaps(currentSkills, targetRole, context = {}) {
       inJobDescription,
       mentionedInEvaluation,
     });
+    band.gaps += 1;
   });
 
   // Biggest, most role-relevant gap first. Stable within a band thanks to index.
@@ -285,6 +295,10 @@ export function analyzeSkillGaps(currentSkills, targetRole, context = {}) {
     gap.rank = index + 1;
     delete gap.catalogIndex;
   });
+
+  for (const band of Object.values(bands)) {
+    band.percent = band.required > 0 ? Math.round((band.matched / band.required) * 100) : 100;
+  }
 
   const totalRequired = allRequirements.length;
   const readiness = totalRequired === 0
@@ -309,6 +323,9 @@ export function analyzeSkillGaps(currentSkills, targetRole, context = {}) {
     totalRequired,
     matchedCount: matched.length,
     gapCount: gaps.length,
+    // Per-importance coverage, so a dashboard can chart "how much of the
+    // critical tier do I actually cover" without re-deriving the role.
+    coverageByImportance: bands,
     readiness,
     experienceLevel: experience,
     jobDescriptionSkills: jdSkills,

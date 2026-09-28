@@ -25,10 +25,11 @@ const COACH_EVALUATION_PROMPT = `You are VoiceCareer AI's Career Coach Agent. Yo
 EVALUATION CRITERIA:
 1. ANSWER RELEVANCE — Did the candidate answer the question asked?
 2. TECHNICAL KNOWLEDGE — How strong is their technical understanding?
-3. COMMUNICATION CLARITY — Was their answer clear and well-structured?
-4. PROBLEM SOLVING — Did they demonstrate logical thinking?
-5. CONFIDENCE — Did they speak with confidence and conviction?
+3. PROBLEM SOLVING — Did they demonstrate logical thinking?
+4. ANSWER STRUCTURE — Was the answer organised into a clear beginning, reasoning and conclusion?
+5. COMMUNICATION CLARITY — Was the answer clear and easy to follow?
 6. FOLLOW-UP HANDLING — How well did they handle follow-up questions?
+7. CONFIDENCE — Did they speak with confidence and conviction?
 
 RULES:
 - Be constructive and specific — not generic
@@ -37,6 +38,10 @@ RULES:
 - Balance positive feedback with areas for growth
 - Keep the tone supportive and encouraging
 - Judge technical knowledge against the role the interview was for
+- ANSWER STRUCTURE and COMMUNICATION CLARITY are different questions. Score structure on
+  organisation (did they set up context, walk through reasoning, then land a conclusion?),
+  and clarity on whether the words themselves were easy to follow. Do not give both the
+  same number just because they sound related.
 
 OUTPUT FORMAT:
 Return a JSON object with this structure:
@@ -45,10 +50,11 @@ Return a JSON object with this structure:
   "evaluation": {
     "answerRelevance": { "score": number (1-10), "feedback": "string" },
     "technicalKnowledge": { "score": number (1-10), "feedback": "string" },
-    "communicationClarity": { "score": number (1-10), "feedback": "string" },
     "problemSolving": { "score": number (1-10), "feedback": "string" },
-    "confidence": { "score": number (1-10), "feedback": "string" },
-    "followUpHandling": { "score": number (1-10), "feedback": "string" }
+    "answerStructure": { "score": number (1-10), "feedback": "string" },
+    "communicationClarity": { "score": number (1-10), "feedback": "string" },
+    "followUpHandling": { "score": number (1-10), "feedback": "string" },
+    "confidence": { "score": number (1-10), "feedback": "string" }
   },
   "strengths": ["string"],
   "improvements": ["string"],
@@ -192,10 +198,11 @@ Provide your evaluation as a JSON object following the specified format.`;
       evaluation: {
         answerRelevance: { score: 5, feedback: "Evaluation parsing failed" },
         technicalKnowledge: { score: 5, feedback: "Evaluation parsing failed" },
-        communicationClarity: { score: 5, feedback: "Evaluation parsing failed" },
         problemSolving: { score: 5, feedback: "Evaluation parsing failed" },
-        confidence: { score: 5, feedback: "Evaluation parsing failed" },
-        followUpHandling: { score: 5, feedback: "Evaluation parsing failed" }
+        answerStructure: { score: 5, feedback: "Evaluation parsing failed" },
+        communicationClarity: { score: 5, feedback: "Evaluation parsing failed" },
+        followUpHandling: { score: 5, feedback: "Evaluation parsing failed" },
+        confidence: { score: 5, feedback: "Evaluation parsing failed" }
       },
       strengths: [],
       improvements: [],

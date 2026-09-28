@@ -63,7 +63,9 @@ router.post("/chat", async (req, res) => {
   try {
     const { sessionId, message } = req.body;
 
-    if (!sessionId || !message) {
+    // A blank or whitespace-only message is a mis-trigger, not a conversation
+    // turn: rejecting it stops an empty turn being recorded in the profile.
+    if (!sessionId || typeof message !== "string" || message.trim().length === 0) {
       return res.status(400).json({ error: "Session ID and message are required" });
     }
 

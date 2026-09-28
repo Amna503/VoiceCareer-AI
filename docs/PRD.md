@@ -55,7 +55,7 @@ the way they would with a real career counselor.
 | **Amna** | AI Agents & Voice/AssemblyAI Lead | Voice pipeline, STT, TTS, agent architecture, prompts, API contract *(DONE)* |
 | **Abiha** | Frontend Developer | React UI, pages, responsive design, toasts/404, SEO |
 | **Momna** | Backend Developer | Express API, routing, session store, integrations |
-| **Irtiqa** | Evaluation Lead | Interview scoring, skill-gap analysis, roadmap engine |
+| **Irtiqa** | AI Evaluation, Data & Testing Lead | Interview scoring, skill-gap analysis, roadmap engine, dashboard analytics, test suite *(DONE)* |
 
 ---
 
@@ -104,16 +104,51 @@ When at least 5 of 8 categories have substantive data, the agent emits a
   completion with `INTERVIEW_COMPLETE`.
 
 ### F4 — Interview Evaluation
-After an interview, the Coach Agent scores performance on 6 weighted criteria and returns
-structured, actionable feedback.
+After an interview, the Coach Agent scores performance on 7 weighted criteria and returns
+structured, actionable feedback. Every score is clamped to the 0-10 scale and every criterion the
+evaluator produced is reported with a name, a label and a colour, so no chart can be drawn from a
+number the model invented.
 
 ### F5 — Skill Gap Analysis
 Compares the candidate's current skills against the requirements of their target role
-(critical / important / nice-to-have), listing matched skills and prioritized gaps.
+(critical / important / nice-to-have), listing matched skills and prioritized gaps, plus per-band
+coverage so the dashboard can chart how much of each tier is actually covered.
 
 ### F6 — Career Roadmap
 Generates a personalized **30-day (4-week) roadmap**: weekly focus areas, goals, activities
 (learn / practice / project / review), milestones, and key learning resources.
+
+### F7 — Dashboard Analytics
+`ai/analytics` turns the evaluation, the gap analysis, the roadmap and the session's interview
+history into chart-ready arrays. No chart library, no framework: parallel `labels` / `values`
+arrays that Recharts, Chart.js or a hand-rolled SVG all read directly.
+
+| Group | Shape | Feeds |
+| --- | --- | --- |
+| Interview performance | `bars[]`, `radar { labels, values }`, `overall` | Score ring, criteria bars, radar |
+| Skill breakdown | `coverage`, `bands[]`, `bandChart`, `comparison`, `rows[]` | Covered/missing donut, band bars, current-vs-required |
+| Progress | `points[]`, `series { overall, readiness, gapCount }`, `delta`, `trend` | Line chart across repeated interviews |
+| Strengths | `items[]` (label, detail, source, percent) | Highlights card |
+| Weaknesses | `items[]` | Improvements card |
+| KPIs | `kpis[]` (key, label, value, display, tone, detail) | Stat row |
+
+The module never throws: a missing evaluation, an empty model response or a half-built session
+returns `available: false` with empty arrays, so the UI renders an empty state instead of a crash.
+
+### F8 — Test Suite
+107 tests on the built-in Node test runner, with **no API key and no network**. A scriptable fake
+OpenAI-compatible provider (`backend/tests/helpers/fakeProvider.js`) stands in for the LLM and TTS,
+so the real Express app is exercised over real HTTP.
+
+| Suite | Covers |
+| --- | --- |
+| `evaluation.test.js` | Evaluation consistency: 7 criteria, structure scored apart from clarity, weighted mean, label boundaries, score clamping, deterministic output, junk input |
+| `careerEngine.test.js` | Skill gaps + roadmap: role specificity, ranking, no reteaching owned skills, 4 weeks with topics/practice/project/milestone |
+| `analytics.test.js` | Chart shapes, 0-100 scaling, band coverage arithmetic, progress trends, empty states |
+| `api.test.js` | API integration, invalid input (400s), AI outage, dead socket, connection reset, empty/unparseable AI replies, interview completion, analytics endpoints |
+| `voice.test.js` | Voice flow: typed turn returns transcript + answer + spoken WAV, full history reaches the AI, invalid audio rejected, transcription failure survivable |
+| `tts.test.js` | Speech synthesis: WAV validity, empty responses, marker/JSON stripping, chunking + merge, upstream failure → `null` |
+| `careerDiscovery.test.js` | Profile completion, marker never leaks, malformed profile JSON, profile feeds the gap engine |
 
 ---
 
@@ -191,8 +226,12 @@ Base: `http://localhost:3000` (frontend proxies `/api` → backend).
 | POST | `/api/evaluate/interview` | Evaluate interview performance |
 | POST | `/api/evaluate/skill-gaps` | Analyze skill gaps |
 | POST | `/api/evaluate/roadmap` | Generate career roadmap |
-| POST | `/api/evaluate/complete` | Full analysis (evaluation + gaps + roadmap) |
-| GET | `/api/evaluate/:sessionId` | Get stored evaluation |
+| POST | `/api/evaluate/complete` | Full analysis (evaluation + gaps + roadmap + analytics) |
+| POST | `/api/evaluate/dashboard` | Plan for a role, no transcript required |
+| GET | `/api/evaluate/roles` | Roles the career engine can assess |
+| POST | `/api/evaluate/analytics` | Chart-ready analytics for a supplied payload |
+| GET | `/api/evaluate/analytics/:sessionId` | Chart-ready analytics + progress for a session |
+| GET | `/api/evaluate/:sessionId` | Get stored evaluation (with its `history`) |
 
 All agent responses include `audio` (base64 WAV) + `audioContentType` when TTS is enabled and the
 Groq Orpheus model terms have been accepted for the API key.
@@ -236,9 +275,18 @@ Profile JSON shape:
 - All outputs are JSON-parsed defensively; graceful defaults if parsing fails.
 
 ### 8.4 Deterministic Career Engine (`ai/career-engine/`)
-- `skillGap.js` — static role requirements for frontend/backend/data/general + matching logic.
-- `roadmap.js` — 4-week templates per role, customized with gap-specific practice activities and
-  computed total hours.
+- `skillGap.js` — static role requirements for every preset role + alias-tolerant matching, and
+  per-importance-band coverage counts.
+- `roadmap.js` — 4-week plans composed at request time from the candidate's own gaps, with
+  gap-specific practice activities and computed total hours.
+- `nextSteps.js` — the dashboard's recommended next steps, worded from this candidate's gaps,
+  evaluation feedback and the weeks of their own plan.
+
+### 8.5 Analytics (`ai/analytics/`)
+- Turns evaluation + gaps + roadmap + session history into the arrays the dashboard charts.
+- Exposes both `rawScore` (1-10) and `percent` (0-100) so nothing is re-derived downstream.
+- Rejects `null` / `""` / booleans before numeric coercion, so an unscored criterion charts as
+  "no data" rather than as 0%.
 
 ---
 
@@ -246,15 +294,26 @@ Profile JSON shape:
 
 | Criterion | Weight |
 | --- | --- |
-| Technical Knowledge | 0.25 |
-| Answer Relevance | 0.20 |
-| Communication Clarity | 0.15 |
+| Technical Knowledge | 0.22 |
+| Answer Relevance | 0.18 |
 | Problem Solving | 0.15 |
-| Follow-up Handling | 0.15 |
-| Confidence | 0.10 |
+| Answer Structure | 0.13 |
+| Communication Clarity | 0.13 |
+| Follow-up Handling | 0.11 |
+| Confidence | 0.08 |
 
-- **Overall score** = weighted mean (0–10).
+**Answer Structure** is scored separately from **Communication Clarity** on purpose. Clarity is
+whether the words were easy to follow; structure is whether the answer was organised — context
+first, then the reasoning, then a conclusion. A candidate can ramble clearly, or be structured but
+hard to follow, and a coach is only useful if it can tell those apart.
+
+- **Overall score** = weighted mean over the criteria actually scored (0–10), so a partial
+  evaluation is still mathematically correct.
 - **Labels**: ≥9 Excellent · ≥7 Good · ≥5 Average · ≥3 Below Average · else Needs Improvement.
+- **Robustness**: scores are clamped to 0-10; `null`, `""`, booleans and non-numeric values are
+  treated as *not scored* and excluded from the report rather than counted as zero.
+- **Consistency**: `formatEvaluationReport` is a pure function of its input — the same evaluation
+  always yields byte-identical output.
 
 ---
 
@@ -274,10 +333,33 @@ Profile JSON shape:
 - **TTS unavailable** (terms not accepted / model error) → graceful fallback to browser `speechSynthesis`.
 - **Ambiguous / vague voice answers** → agents prompt for specifics, never guess.
 - **Payload limits** → Express JSON limit raised to 10 MB for long recordings.
+- **Blank input** → whitespace-only messages and answers are rejected with a 400 rather than
+  recorded as a conversation turn (a blank turn would skew the evaluation).
+- **AI service outage / dead socket / connection reset** → a clean 500 with a message, never a hang
+  and never a stack trace in the response. The API keeps serving other requests.
+- **Empty or unparseable AI response** → the caller still returns a complete, scoreable payload
+  built from deterministic fallbacks; the raw model text is never passed through to the user.
+- **Skill gaps and the roadmap do not require the LLM at all** → they stay fully functional
+  (`source: "career-engine"`) when enrichment fails.
 
 ---
 
-## 12. Timeline (Hackathon)
+## 12. Testing
+
+```bash
+npm test                 # 107 tests, no API key, no network
+npm run test:coverage    # same, with a per-file coverage report
+npm run test:roadmap     # role/gap-specificity regression (pre-existing)
+```
+
+`backend/tests/helpers/fakeProvider.js` serves the OpenAI-compatible chat and speech endpoints with
+scriptable behaviour — valid JSON, empty content, unparseable prose, upstream 500, a socket reset,
+or a request that never answers. `startTestServer` points the real app at it on an ephemeral port,
+so the tests exercise the actual Express routes, agents and career engine.
+
+---
+
+## 13. Timeline (Hackathon)
 
 | Phase | Milestone | Owner |
 | --- | --- | --- |
@@ -286,29 +368,34 @@ Profile JSON shape:
 | 2 | Career Discovery + Interview + Coach agents | Amna ✅ |
 | 3 | Express API + session store + evaluation endpoints | Momna |
 | 4 | React UI: pages, components, routing, toasts | Abiha |
-| 5 | Scoring, skill-gap & roadmap engine | Irtiqa |
+| 5 | Scoring, skill-gap & roadmap engine | Irtiqa ✅ |
+| 5b | Dashboard analytics + 107-test suite | Irtiqa ✅ |
 | 6 | Polish: responsive, SEO, 404, empty states, README | All |
 
 ---
 
-## 13. Acceptance Criteria
+## 14. Acceptance Criteria
 
 1. A user can start a session and the agent greets them warmly.
 2. Speaking a career question returns a relevant, spoken response (text fallback works).
 3. Career Discovery completes with a structured profile JSON.
 4. An interview runs 6–10 adaptive questions and completes cleanly.
 5. Evaluation returns scores + feedback; skill gaps and a 30-day roadmap are generated.
-6. The experience works on mobile (no horizontal scroll, usable nav).
-7. API keys never appear in the repository (`.env` ignored, `.env.example` committed).
+6. The dashboard receives chart-ready data for performance, skills, progress, strengths and
+   weaknesses — and shows an empty state, not a crash, when there is nothing yet.
+7. The experience works on mobile (no horizontal scroll, usable nav).
+8. API keys never appear in the repository (`.env` ignored, `.env.example` committed).
+9. `npm test` runs the full suite with no API key and no network, and it is green.
 
 ---
 
-## 14. Future Work
+## 15. Future Work
 
 - Hosted **AssemblyAI Voice Agent** session (managed full-duplex audio, built-in barge-in).
-- Persistent profiles & session history (database-backed).
+- Persistent profiles & session history (database-backed) — the analytics progress series already
+  reads from the in-memory per-session history, so only the store needs to change.
 - Resume-directed interviews and more role-specific question banks.
-- Saved evaluation history and progress over time.
+- Per-criterion scoring over time (a radar "before vs after" comparison).
 
 ---
 

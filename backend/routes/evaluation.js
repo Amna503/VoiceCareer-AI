@@ -17,12 +17,42 @@ import { Router } from "express";
 import { CoachAgent } from "../../ai/agents/coachAgent.js";
 import { LLMService } from "../../ai/llmService.js";
 import { CAREER_ROLE_REQUIREMENTS, getRoleRequirements } from "../../ai/career-engine/skillGap.js";
+import { buildNextSteps } from "../../ai/career-engine/nextSteps.js";
+import { buildAnalytics } from "../../ai/analytics/index.js";
 import { formatEvaluationReport } from "../../ai/evaluation/evaluator.js";
 
 const router = Router();
 
-// In-memory evaluation store
+/**
+ * In-memory evaluation store.
+ * `history` is kept per session so the dashboard can chart progress across
+ * repeated interviews instead of showing a single number (ai/analytics).
+ */
 const evaluations = new Map();
+
+/** Record one completed analysis and keep every earlier one for the trend. */
+function storeEvaluation(sessionId, entry) {
+  if (!sessionId) return entry;
+  const record = { ...entry, evaluatedAt: entry.evaluatedAt || new Date().toISOString() };
+  const existing = evaluations.get(sessionId);
+  const history = Array.isArray(existing?.history) ? existing.history : [];
+  evaluations.set(sessionId, {
+    ...record,
+    latest: record,
+    history: [...history, record].slice(-20),
+  });
+  return record;
+}
+
+function readStored(sessionId) {
+  const record = evaluations.get(sessionId);
+  if (!record) return null;
+  return {
+    ...record,
+    latest: record.latest || record,
+    history: Array.isArray(record.history) && record.history.length ? record.history : [record],
+  };
+}
 
 function toStringArray(value) {
   if (Array.isArray(value)) {
@@ -48,14 +78,44 @@ function readContext(body = {}) {
 }
 
 /** Compact dashboard payload so the React side renders backend data, never literals. */
-function toDashboardPayload({ evaluation, skillGaps, roadmap, targetRole, mode }) {
+function toDashboardPayload({
+  evaluation,
+  skillGaps,
+  roadmap,
+  targetRole,
+  mode,
+  candidateProfile,
+  experience,
+  interviewCompleted = false,
+  history,
+}) {
+  const resolvedTargetRole = targetRole || candidateProfile?.careerGoal || "general";
+
   return {
-    targetRole,
-    targetRoleTitle: roadmap.targetRoleTitle || skillGaps.targetRoleTitle,
+    targetRole: resolvedTargetRole,
+    targetRoleTitle: roadmap?.targetRoleTitle || skillGaps?.targetRoleTitle || null,
     mode: mode || null,
+    // The candidate as the backend received them: the greeting, the profile panel
+    // and the interview type line all read from here instead of a literal.
+    candidate: {
+      name: candidateProfile?.name || null,
+      // The engine's list is the real one: it falls back to skills mentioned in
+      // the interview transcript when the candidate never typed a list.
+      skills: toStringArray(candidateProfile?.skills).length
+        ? toStringArray(candidateProfile.skills)
+        : toStringArray(skillGaps?.currentSkills),
+      experience: experience || candidateProfile?.experience || skillGaps?.experienceLevel?.label || null,
+    },
+    interviewCompleted,
+    interviewMode: mode || null,
     evaluation: evaluation || null,
     skillGaps: skillGaps || null,
     roadmap: roadmap || null,
+    // Composed from THIS candidate's gaps + evaluation + roadmap (career-engine).
+    nextSteps: buildNextSteps({ evaluation, skillGaps, roadmap }),
+    // Chart-ready series: performance, skill breakdown, progress, strengths,
+    // weaknesses. Same numbers the cards above render — never a second source.
+    analytics: buildAnalytics({ evaluation, skillGaps, roadmap, history }),
     generatedAt: new Date().toISOString(),
   };
 }
@@ -79,9 +139,9 @@ router.post("/interview", async (req, res) => {
     const evaluation = await coach.evaluateInterview(interviewHistory, context.candidateProfile);
     const report = formatEvaluationReport(evaluation);
 
-    // Store evaluation
+    // Store evaluation (and keep it in the session's progress history).
     if (sessionId) {
-      evaluations.set(sessionId, {
+      storeEvaluation(sessionId, {
         evaluation,
         report,
         candidateProfile: context.candidateProfile,
@@ -220,14 +280,15 @@ router.post("/complete", async (req, res) => {
 
     const report = formatEvaluationReport(analysis.evaluation);
 
-    // Store complete analysis
-    if (sessionId) {
-      evaluations.set(sessionId, {
-        ...analysis,
-        report,
-        evaluatedAt: new Date().toISOString()
-      });
-    }
+    // Record every completed interview so progress can be charted over time.
+    const stored = sessionId
+      ? storeEvaluation(sessionId, {
+          ...analysis,
+          report,
+          evaluatedAt: new Date().toISOString(),
+        })
+      : null;
+    const history = stored ? readStored(sessionId).history : [stored].filter(Boolean);
 
     res.json({
       evaluation: report,
@@ -239,6 +300,10 @@ router.post("/complete", async (req, res) => {
         roadmap: analysis.roadmap,
         targetRole: context.targetRole,
         mode: context.mode,
+        candidateProfile,
+        experience: context.experience,
+        interviewCompleted: true,
+        history,
       })
     });
   } catch (error) {
@@ -281,6 +346,9 @@ router.post("/dashboard", async (req, res) => {
         roadmap,
         targetRole: context.targetRole,
         mode: context.mode,
+        candidateProfile: context.candidateProfile,
+        experience: context.experience,
+        interviewCompleted: false,
       })
     );
   } catch (error) {
@@ -308,11 +376,57 @@ router.get("/roles", (_req, res) => {
 });
 
 /**
+ * POST /api/evaluate/analytics
+ * Chart-ready analytics (interview performance, skill breakdown, progress,
+ * strengths, weaknesses) for a payload the caller already holds. Returns
+ * `available: false` sections rather than failing when the interview has not
+ * been scored, so the dashboard can render an empty state.
+ */
+router.post("/analytics", (req, res) => {
+  const body = req.body || {};
+  const history = Array.isArray(body.history)
+    ? body.history
+    : body.sessionId
+      ? readStored(body.sessionId)?.history || []
+      : [];
+
+  res.json(
+    buildAnalytics({
+      evaluation: body.evaluation || null,
+      skillGaps: body.skillGaps || null,
+      roadmap: body.roadmap || null,
+      history,
+    })
+  );
+});
+
+/**
+ * GET /api/evaluate/analytics/:sessionId
+ * Chart-ready analytics for a stored session, including the progress series
+ * built from every interview that session has completed.
+ */
+router.get("/analytics/:sessionId", (req, res) => {
+  const stored = readStored(req.params.sessionId);
+  if (!stored) {
+    return res.status(404).json({ error: "Evaluation not found" });
+  }
+
+  res.json(
+    buildAnalytics({
+      evaluation: stored.report || stored.evaluation,
+      skillGaps: stored.skillGaps,
+      roadmap: stored.roadmap,
+      history: stored.history,
+    })
+  );
+});
+
+/**
  * GET /api/evaluate/:sessionId
  * Get stored evaluation for a session
  */
 router.get("/:sessionId", (req, res) => {
-  const evaluation = evaluations.get(req.params.sessionId);
+  const evaluation = readStored(req.params.sessionId);
   if (!evaluation) {
     return res.status(404).json({ error: "Evaluation not found" });
   }

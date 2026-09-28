@@ -1,11 +1,239 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------ *
+ * VoiceCareer AI design tokens
+ *
+ * The seven original tokens (midnight-navy, electric-violet, voice-teal,
+ * coral-pulse, soft-lavender, cloud-white, slate-indigo) are kept so the
+ * live interview screen keeps working exactly as before. The dashboard
+ * tokens below are additive.
+ * ------------------------------------------------------------------ */
 @theme {
-  --color-midnight-navy: #1A1A2E;
-  --color-electric-violet: #6C5CE7;
-  --color-voice-teal: #00CEC9;
-  --color-coral-pulse: #FF7675;
-  --color-soft-lavender: #A29BFE;
-  --color-cloud-white: #F4F3FF;
-  --color-slate-indigo: #2D2D44;
+  /* Legacy palette — still used by the interview flow. */
+  --color-midnight-navy: #1a1a2e;
+  --color-electric-violet: #6c5ce7;
+  --color-voice-teal: #00cec9;
+  --color-coral-pulse: #ff7675;
+  --color-soft-lavender: #a29bfe;
+  --color-cloud-white: #f4f3ff;
+  --color-slate-indigo: #2d2d44;
+
+  /* Dashboard surfaces — modern dark navy. */
+  --color-navy-950: #06080f;
+  --color-navy-900: #0a0e1c;
+  --color-navy-850: #0e1425;
+  --color-navy-800: #131a2f;
+  --color-navy-750: #171f38;
+  --color-navy-700: #1c2542;
+  --color-navy-600: #273252;
+
+  /* Card surfaces + borders. */
+  --color-panel: #101731;
+  --color-panel-raised: #151d3c;
+  --color-panel-inset: #0b1124;
+  --color-stroke: #212b4d;
+  --color-stroke-soft: #1a2240;
+  --color-stroke-strong: #33406e;
+
+  /* Accents. */
+  --color-brand-violet: #7c5cff;
+  --color-brand-violet-soft: #a78bfa;
+  --color-brand-indigo: #6366f1;
+  --color-brand-cyan: #22d3ee;
+  --color-brand-sky: #38bdf8;
+  --color-brand-emerald: #34d399;
+  --color-brand-amber: #fbbf24;
+  --color-brand-rose: #fb7185;
+
+  /* Text. */
+  --color-ink: #eef1ff;
+  --color-ink-muted: #a3add0;
+  --color-ink-subtle: #6f7ba3;
+  --color-ink-faint: #4d5878;
+
+  --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --radius-xl2: 1.25rem;
+  --radius-xl3: 1.75rem;
+
+  --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.04) inset,
+    0 18px 40px -24px rgb(0 0 0 / 0.85);
+  --shadow-panel-hover: 0 1px 0 0 rgb(255 255 255 / 0.07) inset,
+    0 26px 54px -26px rgb(0 0 0 / 0.9);
+  --shadow-glow-violet: 0 0 0 1px rgb(124 92 255 / 0.28),
+    0 18px 44px -22px rgb(124 92 255 / 0.55);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-navy-950);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgb(124 92 255 / 0.35);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Reusable surface primitives
+ * ------------------------------------------------------------------ */
+
+@layer components {
+  /* Card: rounded, bordered, softly lit, hover-reactive. */
+  .vc-card {
+    position: relative;
+    border-radius: var(--radius-xl2);
+    border: 1px solid var(--color-stroke);
+    background-image: linear-gradient(
+      160deg,
+      rgb(255 255 255 / 0.045) 0%,
+      rgb(255 255 255 / 0.012) 42%,
+      rgb(255 255 255 / 0) 100%
+    ), linear-gradient(180deg, var(--color-panel-raised), var(--color-panel));
+    box-shadow: var(--shadow-panel);
+    transition: border-color 200ms ease, box-shadow 200ms ease,
+      transform 200ms ease;
+  }
+
+  .vc-card-hover:hover {
+    border-color: var(--color-stroke-strong);
+    box-shadow: var(--shadow-panel-hover);
+    transform: translateY(-2px);
+  }
+
+  /* Small uppercase eyebrow label used on every card. */
+  .vc-eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-ink-subtle);
+  }
+
+  .vc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-stroke);
+    background-color: rgb(255 255 255 / 0.04);
+    padding: 0.1875rem 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+  }
+
+  .vc-divider {
+    height: 1px;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      var(--color-stroke) 18%,
+      var(--color-stroke) 82%,
+      transparent
+    );
+  }
+
+  /* Focusable controls. */
+  .vc-input {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-stroke);
+    background-color: var(--color-panel-inset);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-ink);
+    outline: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .vc-input::placeholder {
+    color: var(--color-ink-faint);
+  }
+
+  .vc-input:focus {
+    border-color: var(--color-brand-violet);
+    box-shadow: 0 0 0 3px rgb(124 92 255 / 0.18);
+  }
+
+  .vc-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-navy-600) transparent;
+  }
+
+  .vc-scroll::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  .vc-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .vc-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--color-navy-600);
+    border-radius: 9999px;
+  }
+
+  .vc-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-stroke-strong);
+  }
+}
+
+/* Entrance animations — short, subtle, and disabled on reduced motion. */
+@keyframes vc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vc-draw {
+  from {
+    stroke-dashoffset: var(--vc-draw-target, 100);
+  }
+}
+
+.vc-rise {
+  animation: vc-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.vc-fade {
+  animation: vc-fade 260ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-rise,
+  .vc-fade,
+  .vc-draw {
+    animation: none !important;
+  }
+
+  .vc-card-hover:hover {
+    transform: none;
+  }
 }

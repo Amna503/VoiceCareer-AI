@@ -76,7 +76,9 @@ router.post("/respond", async (req, res) => {
   try {
     const { sessionId, answer } = req.body;
 
-    if (!sessionId || !answer) {
+    // A blank answer would otherwise be recorded as a turn and skew the
+    // evaluation, so it is rejected like any other invalid input.
+    if (!sessionId || typeof answer !== "string" || answer.trim().length === 0) {
       return res.status(400).json({ error: "Session ID and answer are required" });
     }
 

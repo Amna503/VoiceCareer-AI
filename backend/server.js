@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { pathToFileURL } from "node:url";
 import express from "express";
 import cors from "cors";
 import voiceRoutes from "./routes/voice.js";
@@ -66,12 +67,28 @@ app.get("/api", (_req, res) => {
         "POST /api/evaluate/complete": "Generate complete analysis",
         "POST /api/evaluate/dashboard": "Skill gaps + roadmap for a role, no transcript needed",
         "GET /api/evaluate/roles": "Roles the career engine can assess",
+        "POST /api/evaluate/analytics": "Chart-ready analytics for a supplied payload",
+        "GET /api/evaluate/analytics/:sessionId": "Chart-ready analytics + progress for a session",
         "GET /api/evaluate/:sessionId": "Get stored evaluation"
       }
     }
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`VoiceCareer AI backend running on http://localhost:${PORT}`);
-});
+// Exported so tests can mount the real app on an ephemeral port instead of
+// hitting a long-running dev server.
+export { app };
+
+/* Only listen when executed directly, not when imported by a test.
+ * Built with pathToFileURL because a Windows path like C:\app\server.js has to
+ * become file:///C:/app/server.js before it can be compared to import.meta.url. */
+const isDirectRun =
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isDirectRun) {
+  app.listen(PORT, () => {
+    console.log(`VoiceCareer AI backend running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

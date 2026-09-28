@@ -118,13 +118,16 @@ function ResultsSummary({ analysis, onContinue }) {
   )
 }
 
-function InterviewPage({ onFinish }) {
+function InterviewPage({ onFinish, onBack }) {
   const [targetRole, setTargetRole] = useState('frontend')
   const [mode, setMode] = useState('technical')
   const [candidateName, setCandidateName] = useState('')
   const [jobDescription, setJobDescription] = useState('')
   const [analysis, setAnalysis] = useState(null)
   const [scoring, setScoring] = useState(false)
+  // Real wall-clock start of this interview, handed to the dashboard so its
+  // header can show when this session actually happened.
+  const [startedAt, setStartedAt] = useState(null)
 
   const availableRoles = useTargetRoles()
   const TARGET_ROLES = availableRoles.length
@@ -149,6 +152,7 @@ function InterviewPage({ onFinish }) {
 
   const handleStart = () => {
     setAnalysis(null)
+    setStartedAt(new Date().toISOString())
     start({
       targetRole,
       mode,
@@ -188,6 +192,16 @@ function InterviewPage({ onFinish }) {
 
   return (
     <div className="min-h-screen bg-midnight-navy text-cloud-white flex flex-col items-center gap-6 px-6 py-10">
+      {onBack && !analysis ? (
+        <button
+          type="button"
+          onClick={onBack}
+          className="self-start px-4 py-2 text-sm text-soft-lavender hover:text-cloud-white transition-colors"
+        >
+          ← Back
+        </button>
+      ) : null}
+
       <div className="flex flex-col items-center gap-2">
         <h2 className="text-2xl font-semibold text-soft-lavender">Live Mock Interview</h2>
         <p className="text-sm text-slate-300 text-center max-w-xl">
@@ -200,7 +214,15 @@ function InterviewPage({ onFinish }) {
       {analysis ? (
         <ResultsSummary
           analysis={analysis}
-          onContinue={() => onFinish?.({ analysis, targetRole, mode })}
+          onContinue={() =>
+            onFinish?.({
+              analysis,
+              targetRole,
+              mode,
+              candidateName: candidateName.trim() || null,
+              completedAt: startedAt,
+            })
+          }
         />
       ) : null}
 

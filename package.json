@@ -14,6 +14,8 @@
     "build": "npm run build --prefix frontend",
     "lint": "npm run lint --prefix frontend",
     "preview": "npm run preview --prefix frontend",
+    "test": "npm test --prefix backend",
+    "test:coverage": "npm run test:coverage --prefix backend",
     "test:roadmap": "npm run test:roadmap --prefix backend"
   },
   "engines": {
