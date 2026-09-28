@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-midnight-navy: #1A1A2E;
+  --color-electric-violet: #6C5CE7;
+  --color-voice-teal: #00CEC9;
+  --color-coral-pulse: #FF7675;
+  --color-soft-lavender: #A29BFE;
+  --color-cloud-white: #F4F3FF;
+  --color-slate-indigo: #2D2D44;
+}
