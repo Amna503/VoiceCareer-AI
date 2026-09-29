@@ -22,7 +22,7 @@ export function DashboardCard({
     <section
       style={delay ? { animationDelay: `${delay}ms` } : undefined}
       className={cx(
-        'vc-card vc-card-hover vc-rise flex flex-col overflow-hidden p-5 sm:p-6',
+        'vc-card vc-card-hover vc-rise flex min-w-0 flex-col overflow-hidden p-5 sm:p-6',
         className,
       )}
     >

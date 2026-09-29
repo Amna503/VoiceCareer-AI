@@ -133,35 +133,50 @@ export default function DashboardPage({ result, onBack, onNavigate, activeView =
           error={error}
         />
 
-        <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid w-full grid-cols-12 items-stretch gap-5">
           <OverallScoreCard
             overall={model.overall}
             profile={profile}
+            className="col-span-12 md:col-span-6 xl:col-span-4"
             delay={0}
           />
           <CategoryScoresCard
             categories={model.categories}
             extras={model.categoryExtras}
+            className="col-span-12 md:col-span-6 xl:col-span-8"
             delay={60}
           />
           <PerformanceSummaryCard
             performance={model.performance}
+            className="col-span-12"
             delay={120}
           />
 
-          <StrengthsCard highlights={model.highlights} delay={180} />
-          <ImprovementsCard highlights={model.highlights} delay={240} />
-          <NextStepsCard nextSteps={model.nextSteps} delay={300} />
+          <StrengthsCard
+            highlights={model.highlights}
+            className="col-span-12 md:col-span-6"
+            delay={180}
+          />
+          <ImprovementsCard
+            highlights={model.highlights}
+            className="col-span-12 md:col-span-6"
+            delay={240}
+          />
+          <NextStepsCard
+            nextSteps={model.nextSteps}
+            className="col-span-12 md:col-span-6"
+            delay={300}
+          />
 
           <SkillGapCard
             comparison={model.skillComparison}
-            className="md:col-span-2 lg:col-span-3"
+            className="col-span-12 md:col-span-6"
             delay={360}
           />
 
           <RoadmapSection
             roadmap={model.roadmapView}
-            className="md:col-span-2 lg:col-span-3"
+            className="col-span-12"
             delay={420}
           />
         </div>

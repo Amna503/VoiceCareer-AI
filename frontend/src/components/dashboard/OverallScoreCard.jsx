@@ -25,7 +25,7 @@ export default function OverallScoreCard({ overall, profile, delay = 0, classNam
       className={className}
       action={hasScore ? <Pill tone={overall.tone}>{overall.label || 'Scored'}</Pill> : null}
     >
-      <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+      <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:flex-wrap">
         <ScoreDonut
           value={hasScore ? overall.score : 0}
           max={overall.max}
@@ -45,7 +45,7 @@ export default function OverallScoreCard({ overall, profile, delay = 0, classNam
           </div>
         </ScoreDonut>
 
-        <div className="w-full min-w-0 flex-1 space-y-3.5">
+        <div className="w-full min-w-[5.5rem] flex-1 space-y-3.5">
           <DetailRow
             label="Target Role"
             icon={Target}

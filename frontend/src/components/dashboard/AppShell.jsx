@@ -242,7 +242,9 @@ export default function AppShell({
           ) : null}
         </header>
 
-        <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="min-w-0 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          {children}
+        </main>
       </div>
     </div>
   )
