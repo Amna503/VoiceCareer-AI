@@ -133,7 +133,7 @@ export default function DashboardPage({ result, onBack, onNavigate, activeView =
           error={error}
         />
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           <OverallScoreCard
             overall={model.overall}
             profile={profile}
@@ -155,11 +155,15 @@ export default function DashboardPage({ result, onBack, onNavigate, activeView =
 
           <SkillGapCard
             comparison={model.skillComparison}
-            className="md:col-span-2"
+            className="md:col-span-2 lg:col-span-3"
             delay={360}
           />
 
-          <RoadmapSection roadmap={model.roadmapView} className="md:col-span-2" delay={420} />
+          <RoadmapSection
+            roadmap={model.roadmapView}
+            className="md:col-span-2 lg:col-span-3"
+            delay={420}
+          />
         </div>
 
         {onBack ? (
