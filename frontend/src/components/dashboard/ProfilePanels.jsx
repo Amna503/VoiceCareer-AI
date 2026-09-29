@@ -11,7 +11,7 @@ import {
 import { DashboardCard, DetailRow, EmptyNote, Pill, ProgressBar } from './primitives'
 import { cx } from './tokens'
 
-/** Sidebar "Profile" view â€” the candidate's career profile, entirely backend data. */
+/** Sidebar "Profile" view — the candidate's career profile, entirely backend data. */
 export function ProfilePanel({ profile, skillComparison, delay = 0 }) {
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -62,7 +62,7 @@ export function ProfilePanel({ profile, skillComparison, delay = 0 }) {
             <ProgressBar value={profile.readiness} tone="violet" height="h-1.5" className="mt-2" />
             <p className="mt-2 text-[11px] text-ink-faint">
               {profile.matchedSkills.length} of {profile.totalRequired ?? 0} requirements covered
-              {profile.gapCount !== null ? ` Â· ${profile.gapCount} gaps open` : ''}
+              {profile.gapCount !== null ? ` · ${profile.gapCount} gaps open` : ''}
             </p>
           </div>
         ) : null}
@@ -89,7 +89,7 @@ export function ProfilePanel({ profile, skillComparison, delay = 0 }) {
                 ))
               ) : (
                 <p className="text-xs text-ink-faint">
-                  None recorded â€” skills are inferred from your transcript until you add them.
+                  None recorded — skills are inferred from your transcript until you add them.
                 </p>
               )}
             </div>
@@ -160,7 +160,7 @@ export function ProfilePanel({ profile, skillComparison, delay = 0 }) {
   )
 }
 
-/** Sidebar "Settings" view â€” which surfaces are powered by which engine. */
+/** Sidebar "Settings" view — which surfaces are powered by which engine. */
 export function SettingsPanel({ profile, roadmap, skillGaps, delay = 0 }) {
   const sources = roadmap?.generatedFrom || []
   const readable = {
@@ -179,7 +179,7 @@ export function SettingsPanel({ profile, roadmap, skillGaps, delay = 0 }) {
         icon={Sparkles}
         eyebrow="Settings"
         title="Analysis sources"
-        subtitle="Everything on this dashboard is generated at request time â€” nothing is a fixed template."
+        subtitle="Everything on this dashboard is generated at request time — nothing is a fixed template."
         tone="violet"
         delay={delay}
       >
@@ -187,27 +187,27 @@ export function SettingsPanel({ profile, roadmap, skillGaps, delay = 0 }) {
           {[
             {
               label: 'Scoring & evaluation',
-              value: 'ai/evaluation + CoachAgent â€” scored from your real transcript',
+              value: 'ai/evaluation + CoachAgent — scored from your real transcript',
               live: Boolean(skillGaps) || profile.timestamp !== null,
             },
             {
               label: 'Role requirements',
-              value: 'ai/career-engine/roleCatalog.js â€” resolved from your target role',
+              value: 'ai/career-engine/roleCatalog.js — resolved from your target role',
               live: Boolean(skillGaps),
             },
             {
               label: 'Skill gap analysis',
-              value: 'ai/career-engine/skillGap.js â€” ranked by importance, job description and interview',
+              value: 'ai/career-engine/skillGap.js — ranked by importance, job description and interview',
               live: Boolean(skillGaps),
             },
             {
               label: '30-day roadmap',
-              value: 'ai/career-engine/roadmap.js â€” composed from your ranked gaps',
+              value: 'ai/career-engine/roadmap.js — composed from your ranked gaps',
               live: roadmap?.hasData,
             },
             {
               label: 'Voice interview',
-              value: 'AssemblyAI Voice Agent â€” live audio, live transcript, adaptive questions',
+              value: 'AssemblyAI Voice Agent — live audio, live transcript, adaptive questions',
               live: true,
             },
           ].map((row) => (
@@ -261,7 +261,7 @@ export function SettingsPanel({ profile, roadmap, skillGaps, delay = 0 }) {
 
         <p className="mt-5 border-t border-stroke-soft pt-4 text-[11px] leading-relaxed text-ink-faint">
           Change your target role or add the skills you already have from the dashboard's plan
-          generator â€” the roadmap, gaps and recommendations are rebuilt for that role.
+          generator — the roadmap, gaps and recommendations are rebuilt for that role.
         </p>
       </DashboardCard>
     </div>

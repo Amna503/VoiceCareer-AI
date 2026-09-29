@@ -25,7 +25,7 @@ function ChartTooltip({ active, payload, label }) {
       {row ? (
         <p className="mt-0.5 text-[10px] uppercase tracking-wider text-ink-faint">
           {row.importanceLabel}
-          {row.currentLevel ? ` Â· currently ${row.currentLevel}` : ''}
+          {row.currentLevel ? ` · currently ${row.currentLevel}` : ''}
         </p>
       ) : null}
       <ul className="mt-2 space-y-1">
@@ -51,12 +51,12 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 /**
- * Section 6 â€” Skill Gap Analysis.
+ * Section 6 — Skill Gap Analysis.
  * Candidate level vs the level the target role requires. The required bar is
  * the importance band the role catalog assigned; the candidate bar is the
  * level the analyzer estimated. Both come from the career engine.
  */
-export default function SkillGapCard({ comparison, delay = 0 }) {
+export default function SkillGapCard({ comparison, delay = 0, className }) {
   const { rows, gapCount, totalRequired, readiness, hasData } = comparison
 
   return (
@@ -67,12 +67,13 @@ export default function SkillGapCard({ comparison, delay = 0 }) {
       subtitle={
         hasData
           ? `${gapCount} of ${totalRequired} requirements outstanding${
-              readiness !== null && readiness !== undefined ? ` Â· ${readiness}% readiness` : ''
+              readiness !== null && readiness !== undefined ? ` · ${readiness}% readiness` : ''
             }`
           : 'Generate a plan to compare your skills against the role requirements.'
       }
       tone="sky"
       delay={delay}
+      className={className}
       action={readiness !== null && readiness !== undefined ? <Pill tone="sky">{readiness}% ready</Pill> : null}
     >
       {hasData ? (
@@ -147,7 +148,7 @@ export default function SkillGapCard({ comparison, delay = 0 }) {
                     <span className="shrink-0 text-[11px] tabular-nums text-ink-subtle">
                       {row.current} / {row.required}
                       {shortfall > 0 ? (
-                        <span className="ml-1.5 text-brand-rose">âˆ’{shortfall}</span>
+                        <span className="ml-1.5 text-brand-rose">→{shortfall}</span>
                       ) : (
                         <span className="ml-1.5 text-brand-emerald">met</span>
                       )}

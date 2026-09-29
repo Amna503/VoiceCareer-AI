@@ -3,11 +3,11 @@ import { DashboardCard, DetailRow, EmptyNote, Pill, ScoreDonut } from './primiti
 import { cx } from './tokens'
 
 /**
- * Section 1 â€” Overall Performance.
+ * Section 1 — Overall Performance.
  * Score, label, target role, experience level and interview type all come
  * straight from the scored interview payload.
  */
-export default function OverallScoreCard({ overall, profile, delay = 0 }) {
+export default function OverallScoreCard({ overall, profile, delay = 0, className }) {
   const hasScore = overall.hasScore
 
   return (
@@ -22,6 +22,7 @@ export default function OverallScoreCard({ overall, profile, delay = 0 }) {
       }
       tone={overall.tone}
       delay={delay}
+      className={className}
       action={hasScore ? <Pill tone={overall.tone}>{overall.label || 'Scored'}</Pill> : null}
     >
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
@@ -36,7 +37,7 @@ export default function OverallScoreCard({ overall, profile, delay = 0 }) {
           <div className="leading-none">
             <p className="text-[10px] uppercase tracking-[0.18em] text-ink-faint">Score</p>
             <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-ink">
-              {hasScore ? overall.score : 'â€”'}
+              {hasScore ? overall.score : '—'}
             </p>
             <p className="mt-1 text-[11px] text-ink-subtle">
               {hasScore ? `out of ${overall.max}` : 'awaiting interview'}

@@ -14,12 +14,12 @@ const ORIGIN_TONE = {
 }
 
 /**
- * Section 8 â€” Recommended Next Steps.
+ * Section 8 — Recommended Next Steps.
  * Every item is derived from this candidate's ranked skill gaps, their interview
  * evaluation and their own roadmap weeks, and each one is tagged with the
- * signal it came from â€” so the list is visibly personal, never a fixed set.
+ * signal it came from — so the list is visibly personal, never a fixed set.
  */
-export default function NextStepsCard({ nextSteps, delay = 0 }) {
+export default function NextStepsCard({ nextSteps, delay = 0, className }) {
   const { steps, hasSteps, fallback } = nextSteps
 
   return (
@@ -30,6 +30,7 @@ export default function NextStepsCard({ nextSteps, delay = 0 }) {
       subtitle="Ranked from your skill gaps, interview feedback and your own plan."
       tone="amber"
       delay={delay}
+      className={className}
       action={hasSteps ? <Pill tone="amber">{steps.length} steps</Pill> : null}
     >
       {hasSteps ? (

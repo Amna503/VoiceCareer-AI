@@ -3,11 +3,11 @@ import { DashboardCard, EmptyNote, Pill, ProgressBar } from './primitives'
 import { cx } from './tokens'
 
 /**
- * Section 2 â€” Category Scores.
+ * Section 2 — Category Scores.
  * Horizontal bars, one per criterion the evaluator scored. The values are the
  * backend's own per-criterion scores re-expressed on a /100 scale.
  */
-export default function CategoryScoresCard({ categories, extras, delay = 0 }) {
+export default function CategoryScoresCard({ categories, extras, delay = 0, className }) {
   const hasBars = categories.length > 0
 
   return (
@@ -18,6 +18,7 @@ export default function CategoryScoresCard({ categories, extras, delay = 0 }) {
       subtitle="Each bar is a criterion from your interview evaluation."
       tone="cyan"
       delay={delay}
+      className={className}
       action={
         hasBars ? (
           <Pill tone="cyan">

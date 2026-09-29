@@ -118,16 +118,16 @@ function WeekCard({ week, index, total }) {
 }
 
 /**
- * Section 7 â€” the 30-Day Career Roadmap, the dashboard's main section.
+ * Section 7 — the 30-Day Career Roadmap, the dashboard's main section.
  * Every week, skill, task and outcome is what ai/career-engine generated for
  * this candidate's target role and prioritised gaps. Nothing here is a fixed
  * four-week template.
  */
-export default function RoadmapSection({ roadmap, delay = 0 }) {
+export default function RoadmapSection({ roadmap, delay = 0, className }) {
   const { weeks, roleTitle, totalHours, hasData, consolidation, source, interviewThemes } = roadmap
 
   return (
-    <div id="roadmap" className="scroll-mt-24">
+    <div id="roadmap" className={cx('min-w-0 scroll-mt-24', className)}>
       <DashboardCard
         icon={CalendarRange}
         eyebrow="30-Day Career Roadmap"
@@ -141,7 +141,6 @@ export default function RoadmapSection({ roadmap, delay = 0 }) {
         }
         tone="emerald"
         delay={delay}
-        className="xl:col-span-12"
         action={
           hasData ? (
             <div className="flex flex-wrap justify-end gap-1.5">

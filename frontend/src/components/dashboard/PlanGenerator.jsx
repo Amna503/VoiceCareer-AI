@@ -3,7 +3,7 @@ import { Loader2, RefreshCw, Wand2 } from 'lucide-react'
 import { cx } from './tokens'
 
 /**
- * Plan generator â€” the same call the dashboard has always made
+ * Plan generator — the same call the dashboard has always made
  * (POST /api/evaluate/dashboard), restyled to match the new shell. Rebuilds the
  * skill gaps and roadmap for a different role without touching the interview.
  */
@@ -35,7 +35,7 @@ export default function PlanGenerator({ roles, role, onRoleChange, onGenerate, l
         <span className="min-w-0 flex-1">
           <span className="block text-[13px] font-medium text-ink">Rebuild my plan for a different role</span>
           <span className="block truncate text-[11px] text-ink-subtle">
-            Re-runs the career engine against the role requirements â€” your interview data is kept.
+            Re-runs the career engine against the role requirements — your interview data is kept.
           </span>
         </span>
         <RefreshCw
@@ -90,7 +90,7 @@ export default function PlanGenerator({ roles, role, onRoleChange, onGenerate, l
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-violet to-brand-indigo px-4 py-2 text-[13px] font-medium text-white shadow-[0_14px_30px_-16px_rgba(124,92,255,0.9)] transition-opacity hover:opacity-95 disabled:opacity-60"
             >
               {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-              {loading ? 'Generating your planâ€¦' : 'Generate my 30-day plan'}
+              {loading ? 'Generating your plan…' : 'Generate my 30-day plan'}
             </button>
           </div>
 

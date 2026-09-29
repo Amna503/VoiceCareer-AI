@@ -7,7 +7,7 @@ import { DashboardCard, EmptyNote, Pill } from './primitives'
  * scored they fall back to the career engine's matched skills and open gaps,
  * so the card is never empty and never generic.
  */
-export function StrengthsCard({ highlights, delay = 0 }) {
+export function StrengthsCard({ highlights, delay = 0, className }) {
   const items = highlights.strengths
 
   return (
@@ -22,6 +22,7 @@ export function StrengthsCard({ highlights, delay = 0 }) {
       }
       tone="emerald"
       delay={delay}
+      className={className}
       action={items.length ? <Pill tone="emerald">{items.length} found</Pill> : null}
     >
       {items.length ? (
@@ -46,7 +47,7 @@ export function StrengthsCard({ highlights, delay = 0 }) {
   )
 }
 
-export function ImprovementsCard({ highlights, delay = 0 }) {
+export function ImprovementsCard({ highlights, delay = 0, className }) {
   const items = highlights.improvements
 
   return (
@@ -61,6 +62,7 @@ export function ImprovementsCard({ highlights, delay = 0 }) {
       }
       tone="rose"
       delay={delay}
+      className={className}
       action={items.length ? <Pill tone="rose">{items.length} to work on</Pill> : null}
     >
       {items.length ? (

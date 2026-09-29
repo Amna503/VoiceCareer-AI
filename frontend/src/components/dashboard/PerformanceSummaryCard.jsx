@@ -13,12 +13,12 @@ const SIGNAL_TONE = {
 }
 
 /**
- * Section 3 â€” Performance Summary ("Your Performance").
+ * Section 3 — Performance Summary ("Your Performance").
  * The narrative is assembled from the real score, the strongest/weakest scored
  * criterion, role readiness and the candidate's own top gaps, so it is never
  * the same paragraph for two candidates.
  */
-export default function PerformanceSummaryCard({ performance, delay = 0 }) {
+export default function PerformanceSummaryCard({ performance, delay = 0, className }) {
   if (!performance.available) {
     return (
       <DashboardCard
@@ -27,6 +27,7 @@ export default function PerformanceSummaryCard({ performance, delay = 0 }) {
         title="Performance summary"
         tone="violet"
         delay={delay}
+        className={className}
       >
         <EmptyNote>{performance.body}</EmptyNote>
       </DashboardCard>
@@ -40,6 +41,7 @@ export default function PerformanceSummaryCard({ performance, delay = 0 }) {
       title={performance.headline}
       tone="violet"
       delay={delay}
+      className={className}
       action={
         performance.percent !== null ? (
           <span className="text-lg font-semibold tabular-nums text-ink">
