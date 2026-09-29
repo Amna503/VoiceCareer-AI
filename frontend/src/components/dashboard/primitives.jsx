@@ -41,7 +41,7 @@ export function DashboardCard({
 
         <div className="min-w-0 flex-1">
           {eyebrow ? <p className="vc-eyebrow">{eyebrow}</p> : null}
-          <h3 className="truncate text-[15px] font-semibold text-ink sm:text-base">
+          <h3 className="line-clamp-2 text-[15px] font-semibold text-ink sm:text-base">
             {title}
           </h3>
           {subtitle ? (

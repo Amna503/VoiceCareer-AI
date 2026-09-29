@@ -182,10 +182,12 @@ export default function AppShell({
             </button>
 
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-[15px] font-semibold tracking-tight text-ink sm:text-lg">
+              <h1 className="line-clamp-2 text-[15px] font-semibold tracking-tight text-ink sm:text-lg">
                 {greetingName ? `Hello, ${greetingName} 👋` : 'Hello 👋'}
               </h1>
-              <p className="mt-0.5 hidden truncate text-xs text-ink-subtle sm:block">{subtitle}</p>
+              <p className="mt-0.5 hidden text-xs leading-relaxed text-ink-subtle sm:line-clamp-2 sm:block">
+                {subtitle}
+              </p>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
@@ -219,10 +221,10 @@ export default function AppShell({
                   {profile?.initials || 'VC'}
                 </span>
                 <span className="hidden min-w-0 text-left sm:block">
-                  <span className="block max-w-[9rem] truncate text-xs font-medium text-ink">
+                  <span className="block max-w-[14rem] text-xs font-medium leading-snug text-ink line-clamp-2">
                     {profile?.displayName || 'Guest'}
                   </span>
-                  <span className="block max-w-[9rem] truncate text-[10px] text-ink-faint">
+                  <span className="block max-w-[14rem] text-[10px] leading-snug text-ink-faint line-clamp-2">
                     {profile?.roleTitle || 'Set a target role'}
                   </span>
                 </span>
@@ -233,7 +235,7 @@ export default function AppShell({
           {interviewTimestampLabel ? (
             <div className="flex items-center gap-2 border-t border-stroke-soft px-4 py-2 sm:hidden">
               <CalendarClock className="size-3.5 text-brand-violet-soft" strokeWidth={1.9} />
-              <p className="truncate text-[11px] text-ink-subtle">
+              <p className="text-[11px] leading-snug text-ink-subtle">
                 Interview · {interviewTimestampLabel}
               </p>
             </div>

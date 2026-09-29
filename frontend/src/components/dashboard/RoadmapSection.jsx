@@ -39,7 +39,9 @@ function WeekCard({ week, index, total }) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase tracking-[0.16em] text-ink-faint">Week {week.week}</p>
-            <p className="truncate text-xs font-medium text-brand-violet-soft">{week.stage}</p>
+            <p className="line-clamp-2 text-xs font-medium leading-snug text-brand-violet-soft">
+              {week.stage}
+            </p>
           </div>
           {week.hours ? (
             <span className="shrink-0 rounded-full border border-white/8 px-2 py-0.5 text-[10px] text-ink-subtle">

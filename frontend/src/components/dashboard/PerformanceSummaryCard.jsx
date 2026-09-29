@@ -75,7 +75,7 @@ export default function PerformanceSummaryCard({ performance, delay = 0, classNa
                 className={cx('size-1.5 rounded-full', SIGNAL_TONE[signal.tone] || SIGNAL_TONE.slate)}
                 aria-hidden="true"
               />
-              <p className="truncate text-[10px] uppercase tracking-wider text-ink-faint">
+              <p className="line-clamp-2 text-[10px] uppercase leading-relaxed tracking-wider text-ink-faint">
                 {signal.label}
               </p>
             </div>

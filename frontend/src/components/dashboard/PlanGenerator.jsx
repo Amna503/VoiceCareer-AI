@@ -34,7 +34,7 @@ export default function PlanGenerator({ roles, role, onRoleChange, onGenerate, l
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[13px] font-medium text-ink">Rebuild my plan for a different role</span>
-          <span className="block truncate text-[11px] text-ink-subtle">
+          <span className="block text-[11px] leading-snug text-ink-subtle line-clamp-3">
             Re-runs the career engine against the role requirements — your interview data is kept.
           </span>
         </span>
