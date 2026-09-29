@@ -22,13 +22,25 @@ GitHub (voicecareer-ai)
 
 ## 1. Deploy the backend to Railway
 
+There is **no `railway.json`**. Railway's *Config as Code* (`railway.json` /
+`railway.toml`) is deprecated: new services cannot opt into it at all, and
+existing services stop reading it on **2026-12-01**. Build and start commands
+are therefore configured in the Railway dashboard, and the repository is
+self-sufficient so Railway's own auto-detection already resolves them.
+
+Because `backend/` imports from the module folder `ai/` at the repository root
+(`../../ai/...`), the service **must** deploy from the repository root. The root
+`package.json` declares `backend` as a workspace and its `start` script runs
+`node backend/server.js`, so the defaults are already correct.
+
 1. Push the repository to GitHub (`main` is current and clean).
 2. In Railway: **New → From a GitHub repo** → select the repo.
-3. Settings → *no* root directory override (must be the repository root so
-   `ai/` is present). The file `railway.json` already sets the commands:
-   - Build: `npm install --omit=dev --prefix backend`
-   - Start: `node backend/server.js`
-   - Health: `GET /health`
+3. Settings → confirm the root directory is empty (`/`, the repository root).
+   Leave **Build Command** and **Start Command** blank to use the auto-detected
+   `npm ci` and `npm start`, or set them explicitly:
+   - Build: `npm ci --omit=dev`
+   - Start: `npm start`
+   - Health check path: `/health` (Settings → Deploy → Healthcheck Path)
 4. **Variables** (Railway sets `PORT` and `NODE_ENV` itself; add these):
 
    | Variable | Example | Required |
@@ -76,6 +88,17 @@ This narrows CORS from “any origin” to just your app.
 
 ## Troubleshooting
 
+- **Build fails with `npm error code EUSAGE` / "Missing: … from lock file"**:
+  the root `package-lock.json` is out of sync with the workspaces. Run
+  `npm install --package-lock-only` at the repository root and commit the
+  regenerated lockfile. This is the failure Railway reports when a stale or
+  merge-conflicted lockfile is committed — `npm ci` refuses to install.
+- **Build fails with a JSON parse error**: a `<<<<<<<` marker is still sitting
+  in a committed `package-lock.json`. Regenerate it as above; never merge-resolve
+  a lockfile by hand.
+- **Wrong server running** (mock JSON replies, 404 on `/health`): the root
+  `package.json` `start` script must be `node backend/server.js`. There is no
+  root-level `server.js`; the real entrypoint lives in `backend/`.
 - **Health check fails**: confirm the service deploys from the repo root (the
   log must show `VoiceCareer AI backend listening on 0.0.0.0:<port>`), verify
   `PORT` is set by Railway, and that `backend/` has no compile errors.

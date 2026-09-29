@@ -7,10 +7,10 @@
     "backend",
     "frontend"
   ],
-  "main": "server.js",
+  "main": "backend/server.js",
   "scripts": {
     "install:all": "npm install --prefix backend && npm install --prefix frontend",
-    "start": "node server.js",
+    "start": "node backend/server.js",
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend",
@@ -22,10 +22,5 @@
   },
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2"
   }
 }
