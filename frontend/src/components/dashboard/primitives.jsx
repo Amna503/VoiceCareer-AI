@@ -22,15 +22,24 @@ export function DashboardCard({
     <section
       style={delay ? { animationDelay: `${delay}ms` } : undefined}
       className={cx(
-        'vc-card vc-card-hover vc-rise flex min-w-0 flex-col overflow-hidden p-5 sm:p-6',
+        'vc-card vc-card-hover vc-rise flex h-full min-w-0 flex-col overflow-hidden p-5 sm:p-6',
         className,
       )}
     >
+      {/* Tone rail — ties the card's accent to its icon, pill and bars. */}
+      <span
+        aria-hidden="true"
+        className={cx(
+          'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r opacity-80',
+          accent.ring,
+        )}
+      />
+
       <header className="flex items-start gap-3">
         {Icon ? (
           <span
             className={cx(
-              'mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-white/8',
+              'mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-white/10',
               accent.soft,
               accent.text,
             )}
@@ -41,18 +50,18 @@ export function DashboardCard({
 
         <div className="min-w-0 flex-1">
           {eyebrow ? <p className="vc-eyebrow">{eyebrow}</p> : null}
-          <h3 className="line-clamp-2 text-[15px] font-semibold text-ink sm:text-base">
+          <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-ink sm:text-base">
             {title}
           </h3>
           {subtitle ? (
-            <p className="mt-1 text-xs leading-relaxed text-ink-subtle">{subtitle}</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-subtle">{subtitle}</p>
           ) : null}
         </div>
 
-        {action ? <div className="shrink-0">{action}</div> : null}
+        {action ? <div className="ml-auto shrink-0">{action}</div> : null}
       </header>
 
-      <div className={cx('mt-5 flex-1', bodyClassName)}>{children}</div>
+      <div className={cx('mt-5 flex flex-1 flex-col', bodyClassName)}>{children}</div>
     </section>
   )
 }
@@ -63,7 +72,7 @@ export function Pill({ tone: toneName = 'slate', icon: Icon, children, className
   return (
     <span
       className={cx(
-        'inline-flex items-center gap-1.5 rounded-full border border-white/8 px-2.5 py-1 text-[11px] font-medium',
+        'inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium',
         accent.soft,
         accent.text,
         className,
@@ -105,6 +114,53 @@ export function ProgressBar({
         )}
         style={{ width: `${percent}%`, transitionDelay: `${delay}ms` }}
       />
+    </div>
+  )
+}
+
+/**
+ * Two readings on one track: a filled bar for where the candidate is now and a
+ * marker for where the role needs them. Used instead of two side-by-side bars,
+ * which read as one confusing block.
+ */
+export function MeterBar({
+  value,
+  marker,
+  tone: toneName = 'violet',
+  markerTone = 'cyan',
+  height = 'h-1.5',
+  label,
+  className,
+}) {
+  const accent = tone(toneName)
+  const markerAccent = tone(markerTone)
+  const asPercent = (input) => {
+    const numeric = Number(input)
+    if (!Number.isFinite(numeric)) return null
+    return Math.min(100, Math.max(0, numeric))
+  }
+  const filled = asPercent(value)
+  const target = asPercent(marker)
+
+  return (
+    <div
+      className={cx('relative w-full overflow-hidden rounded-full bg-navy-800', height, className)}
+      role="img"
+      aria-label={label}
+    >
+      {filled !== null ? (
+        <div
+          className={cx('h-full rounded-full bg-gradient-to-r', accent.ring)}
+          style={{ width: `${filled}%` }}
+        />
+      ) : null}
+      {target !== null ? (
+        <span
+          aria-hidden="true"
+          className={cx('absolute inset-y-0 w-[2px] rounded-full', markerAccent.bg)}
+          style={{ left: `calc(${target}% - 1px)` }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -184,7 +240,7 @@ export function ScoreDonut({
 /** Empty-state line used when a section has no data for this candidate yet. */
 export function EmptyNote({ children }) {
   return (
-    <p className="rounded-xl border border-dashed border-stroke bg-panel-inset/60 px-4 py-6 text-center text-sm text-ink-subtle">
+    <p className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-stroke bg-panel-inset/60 px-4 py-6 text-center text-sm leading-relaxed text-ink-subtle">
       {children}
     </p>
   )

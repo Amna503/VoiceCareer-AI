@@ -10,7 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import { GitCompareArrows } from 'lucide-react'
-import { DashboardCard, EmptyNote, Pill, ProgressBar } from './primitives'
+import { DashboardCard, EmptyNote, MeterBar, Pill } from './primitives'
 import { cx } from './tokens'
 
 const YOUR_LEVEL = '#7c5cff'
@@ -55,9 +55,13 @@ function ChartTooltip({ active, payload, label }) {
  * Candidate level vs the level the target role requires. The required bar is
  * the importance band the role catalog assigned; the candidate bar is the
  * level the analyzer estimated. Both come from the career engine.
+ *
+ * The card spans the full dashboard width: the comparison chart on the left,
+ * the ranked gaps (with what to do about each one) on the right.
  */
 export default function SkillGapCard({ comparison, delay = 0, className }) {
   const { rows, gapCount, totalRequired, readiness, hasData } = comparison
+  const ranked = rows.slice(0, 6)
 
   return (
     <DashboardCard
@@ -77,92 +81,114 @@ export default function SkillGapCard({ comparison, delay = 0, className }) {
       action={readiness !== null && readiness !== undefined ? <Pill tone="sky">{readiness}% ready</Pill> : null}
     >
       {hasData ? (
-        <>
-          <div className="h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rows} margin={{ top: 4, right: 4, bottom: 4, left: -22 }} barGap={4}>
-                <CartesianGrid strokeDasharray="3 4" stroke="#1c2542" vertical={false} />
-                <XAxis
-                  dataKey="skill"
-                  tick={{ fill: '#6f7ba3', fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#212b4d' }}
-                  interval={0}
-                  angle={-28}
-                  textAnchor="end"
-                  height={62}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  ticks={[0, 25, 50, 75, 100]}
-                  tick={{ fill: '#4d5878', fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={46}
-                />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                <Legend
-                  verticalAlign="top"
-                  height={28}
-                  iconType="circle"
-                  iconSize={7}
-                  wrapperStyle={{ fontSize: 11, color: '#a3add0', paddingBottom: 6 }}
-                />
-                <Bar
-                  dataKey="required"
-                  name="Required Level"
-                  fill={REQUIRED_LEVEL}
-                  fillOpacity={0.28}
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={16}
-                />
-                <Bar dataKey="current" name="Your Level" radius={[4, 4, 0, 0]} maxBarSize={16}>
-                  {rows.map((row) => (
-                    <Cell
-                      key={row.skill}
-                      fill={YOUR_LEVEL}
-                      fillOpacity={row.isGap ? 1 : 0.45}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="grid flex-1 gap-x-8 gap-y-5 lg:grid-cols-12 lg:gap-y-2">
+          <div className="lg:col-span-7">
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={rows} margin={{ top: 4, right: 8, bottom: 0, left: -18 }} barGap={6}>
+                  <CartesianGrid strokeDasharray="3 4" stroke="#1c2542" vertical={false} />
+                  <XAxis
+                    dataKey="skill"
+                    tick={{ fill: '#6f7ba3', fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={{ stroke: '#212b4d' }}
+                    interval={0}
+                    angle={-30}
+                    textAnchor="end"
+                    height={78}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    ticks={[0, 25, 50, 75, 100]}
+                    tick={{ fill: '#4d5878', fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={44}
+                  />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                  <Legend
+                    verticalAlign="top"
+                    height={30}
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: 11, color: '#a3add0', paddingBottom: 8 }}
+                  />
+                  <Bar
+                    dataKey="required"
+                    name="Required Level"
+                    fill={REQUIRED_LEVEL}
+                    fillOpacity={0.28}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={18}
+                  />
+                  <Bar dataKey="current" name="Your Level" radius={[4, 4, 0, 0]} maxBarSize={18}>
+                    {rows.map((row) => (
+                      <Cell
+                        key={row.skill}
+                        fill={YOUR_LEVEL}
+                        fillOpacity={row.isGap ? 1 : 0.45}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          <ul className="mt-5 space-y-3 border-t border-stroke-soft pt-4">
-            {rows.slice(0, 5).map((row) => {
+          <ul className="flex flex-col justify-between gap-3 lg:col-span-5 lg:gap-4">
+            {ranked.map((row) => {
               const shortfall = Math.max(0, row.required - row.current)
               return (
-                <li key={row.skill}>
-                  <div className="flex items-baseline justify-between gap-3">
+                <li key={row.skill} className="flex flex-col gap-1.5">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="flex min-w-0 items-center gap-2">
                       <span
                         className={cx(
-                          'size-1.5 shrink-0 rounded-full',
+                          'mt-1.5 size-1.5 shrink-0 rounded-full',
                           row.isGap ? 'bg-brand-rose' : 'bg-brand-emerald',
                         )}
                         aria-hidden="true"
                       />
-                      <span className="truncate text-xs text-ink-muted">{row.skill}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs text-ink-muted">{row.skill}</span>
+                        <span className="block text-[10px] uppercase tracking-wider text-ink-faint">
+                          {row.importanceLabel}
+                        </span>
+                      </span>
                     </span>
                     <span className="shrink-0 text-[11px] tabular-nums text-ink-subtle">
-                      {row.current} / {row.required}
+                      <span className={row.isGap ? 'text-brand-rose' : 'text-brand-emerald'}>
+                        {row.current}
+                      </span>
+                      <span className="text-ink-faint"> / {row.required}</span>
                       {shortfall > 0 ? (
-                        <span className="ml-1.5 text-brand-rose">→{shortfall}</span>
-                      ) : (
-                        <span className="ml-1.5 text-brand-emerald">met</span>
-                      )}
+                        <span className="ml-1.5 text-ink-faint">−{shortfall}</span>
+                      ) : null}
                     </span>
                   </div>
-                  <div className="mt-1.5 flex gap-1">
-                    <ProgressBar value={row.current} tone={row.isGap ? 'violet' : 'emerald'} height="h-1" className="flex-1" />
-                    <ProgressBar value={row.required} tone="cyan" height="h-1" className="flex-1" track="bg-navy-800/60" />
-                  </div>
+                  <MeterBar
+                    value={row.current}
+                    marker={row.required}
+                    tone={row.isGap ? 'violet' : 'emerald'}
+                    markerTone="cyan"
+                    height="h-1.5"
+                    label={`${row.skill}: you are at ${row.current}, the role requires ${row.required}`}
+                  />
+                  {row.suggestedImprovement ? (
+                    <p className="line-clamp-2 pl-3.5 text-[11px] leading-relaxed text-ink-subtle">
+                      {row.suggestedImprovement}
+                    </p>
+                  ) : null}
                 </li>
               )
             })}
           </ul>
-        </>
+
+          <p className="text-[11px] leading-relaxed text-ink-faint lg:col-span-12">
+            The filled bar is your current level; the teal marker is the level this role requires.
+            {rows.length > ranked.length ? ` Showing the ${ranked.length} highest-impact of ${rows.length} skills compared.` : ''}
+          </p>
+        </div>
       ) : (
         <EmptyNote>
           Skill comparison is generated from your target role's requirements, your stated skills and

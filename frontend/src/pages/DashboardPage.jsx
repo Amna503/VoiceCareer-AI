@@ -137,21 +137,21 @@ export default function DashboardPage({ result, onBack, onNavigate, activeView =
           <OverallScoreCard
             overall={model.overall}
             profile={profile}
-            className="col-span-12 md:col-span-6 xl:col-span-4"
+            className="col-span-12 lg:col-span-4"
             delay={0}
           />
           <CategoryScoresCard
             categories={model.categories}
             extras={model.categoryExtras}
-            className="col-span-12 md:col-span-6 xl:col-span-8"
+            className="col-span-12 lg:col-span-8"
             delay={60}
           />
+
           <PerformanceSummaryCard
             performance={model.performance}
-            className="col-span-12"
+            className="col-span-12 md:col-span-6"
             delay={120}
           />
-
           <StrengthsCard
             highlights={model.highlights}
             className="col-span-12 md:col-span-6"
@@ -170,7 +170,7 @@ export default function DashboardPage({ result, onBack, onNavigate, activeView =
 
           <SkillGapCard
             comparison={model.skillComparison}
-            className="col-span-12 md:col-span-6"
+            className="col-span-12"
             delay={360}
           />
 

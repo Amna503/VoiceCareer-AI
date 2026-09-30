@@ -1,6 +1,5 @@
 import { ListOrdered, Sparkles } from 'lucide-react'
 import { DashboardCard, EmptyNote, Pill } from './primitives'
-import { cx } from './tokens'
 
 const ORIGIN_TONE = {
   'Skill gap': 'violet',
@@ -34,7 +33,7 @@ export default function NextStepsCard({ nextSteps, delay = 0, className }) {
       action={hasSteps ? <Pill tone="amber">{steps.length} steps</Pill> : null}
     >
       {hasSteps ? (
-        <ol className="space-y-2.5">
+        <ol className="flex flex-1 flex-col justify-between gap-2.5">
           {steps.map((step, index) => (
             <li
               key={step.id}
@@ -60,10 +59,12 @@ export default function NextStepsCard({ nextSteps, delay = 0, className }) {
         <EmptyNote>{fallback}</EmptyNote>
       )}
 
-      <p className={cx('mt-4 flex items-start gap-1.5 border-t border-stroke-soft pt-3.5 text-[10px] leading-relaxed text-ink-faint')}>
-        <Sparkles className="mt-px size-3 shrink-0 text-brand-violet-soft" strokeWidth={2} />
-        Each step links back to the signal that produced it, so the list changes with every interview.
-      </p>
+      {hasSteps ? (
+        <p className="mt-4 flex shrink-0 items-start gap-1.5 border-t border-stroke-soft pt-3.5 text-[10px] leading-relaxed text-ink-faint">
+          <Sparkles className="mt-px size-3 shrink-0 text-brand-violet-soft" strokeWidth={2} />
+          Each step links back to the signal that produced it, so the list changes with every interview.
+        </p>
+      ) : null}
     </DashboardCard>
   )
 }

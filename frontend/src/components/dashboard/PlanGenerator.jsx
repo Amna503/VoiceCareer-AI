@@ -22,7 +22,7 @@ export default function PlanGenerator({ roles, role, onRoleChange, onGenerate, l
   }
 
   return (
-    <section className="vc-card overflow-hidden">
+    <section className="vc-card vc-rise overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

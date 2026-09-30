@@ -1,6 +1,5 @@
 import { BarChart3 } from 'lucide-react'
 import { DashboardCard, EmptyNote, Pill, ProgressBar } from './primitives'
-import { cx } from './tokens'
 
 /**
  * Section 2 — Category Scores.
@@ -28,7 +27,7 @@ export default function CategoryScoresCard({ categories, extras, delay = 0, clas
       }
     >
       {hasBars ? (
-        <ul className="space-y-4">
+        <ul className="flex flex-1 flex-col justify-between gap-4">
           {categories.map((bar, index) => (
             <li key={bar.key}>
               <div className="flex items-baseline justify-between gap-3">
@@ -63,7 +62,7 @@ export default function CategoryScoresCard({ categories, extras, delay = 0, clas
       )}
 
       {extras.length ? (
-        <div className="mt-5 border-t border-stroke-soft pt-4">
+        <div className="mt-5 shrink-0 border-t border-stroke-soft pt-4">
           <p className="vc-eyebrow">Also scored</p>
           <div className="mt-2.5 space-y-2.5">
             {extras.map((item, index) => (
@@ -88,7 +87,7 @@ export default function CategoryScoresCard({ categories, extras, delay = 0, clas
       ) : null}
 
       {hasBars ? (
-        <p className={cx('mt-5 border-t border-stroke-soft pt-4 text-[11px] leading-relaxed text-ink-faint')}>
+        <p className="mt-5 shrink-0 border-t border-stroke-soft pt-4 text-[11px] leading-relaxed text-ink-faint">
           Scores are reported out of 100 for readability; the evaluator scores each criterion out of 10.
         </p>
       ) : null}
