@@ -527,15 +527,15 @@ export function buildNextSteps(evaluation, skillGaps, roadmapView, skillComparis
   }
 
   // 7. Re-interview — justified by the score, and named for the real role.
-  if (!overall.hasScore || overall.percent < 70) {
+  if (!overall.hasScore || overall.score < 70) {
     push({
       tone: 'violet',
       origin: 'Practice',
       title: `Take another ${roleTitle} mock interview`,
       detail: overall.hasScore
-        ? `A ${overall.percent}/100 in this session. Rehearse the ${roadmapView.interviewThemes.slice(0, 2).join(' and ') || 'questions this role is assessed on'}, then re-score yourself.`
+        ? `A ${overall.score}/100 in this session. Rehearse the ${roadmapView.interviewThemes.slice(0, 2).join(' and ') || 'questions this role is assessed on'}, then re-score yourself.`
         : `Run a full mock ${roleTitle} interview so the dashboard can score you against the real criteria.`,
-      meta: overall.hasScore ? `${overall.percent}/100` : 'Not scored',
+      meta: overall.hasScore ? `${overall.score}/100` : 'Not scored',
     });
   }
 

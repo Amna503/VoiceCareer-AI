@@ -19,7 +19,7 @@ function WeekCard({ week, index, total }) {
       {!isLast ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute left-full top-[18px] hidden h-px w-4 bg-gradient-to-r from-stroke-strong to-transparent xl:block"
+          className="pointer-events-none absolute left-full top-[33px] hidden h-px w-4 bg-gradient-to-r from-stroke-strong to-transparent xl:block"
         />
       ) : null}
 
@@ -44,7 +44,7 @@ function WeekCard({ week, index, total }) {
             </p>
           </div>
           {week.hours ? (
-            <span className="shrink-0 rounded-full border border-white/8 px-2 py-0.5 text-[10px] text-ink-subtle">
+            <span className="shrink-0 rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-ink-subtle">
               {week.hours}h
             </span>
           ) : null}
@@ -76,44 +76,48 @@ function WeekCard({ week, index, total }) {
           </ul>
         ) : null}
 
-        {week.tasks.length ? (
-          <ul className="mt-4 space-y-2">
-            {week.tasks.map((task) => (
-              <li key={task.key} className="flex items-start gap-2">
-                <CheckCircle2
-                  className="mt-[3px] size-3.5 shrink-0 text-brand-cyan/80"
-                  strokeWidth={2}
-                />
-                <span className="min-w-0 text-xs leading-relaxed text-ink-muted">
-                  {task.title}
-                  {task.duration ? (
-                    <span className="ml-1.5 text-[10px] text-ink-faint">{task.duration}</span>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        {/* The actionable part is pinned to the bottom so the four week cards
+            line their tasks and milestones up instead of ending ragged. */}
+        <div className="mt-auto pt-4">
+          {week.tasks.length ? (
+            <ul className="space-y-2">
+              {week.tasks.map((task) => (
+                <li key={task.key} className="flex items-start gap-2">
+                  <CheckCircle2
+                    className="mt-[3px] size-3.5 shrink-0 text-brand-cyan/80"
+                    strokeWidth={2}
+                  />
+                  <span className="min-w-0 text-xs leading-relaxed text-ink-muted">
+                    {task.title}
+                    {task.duration ? (
+                      <span className="ml-1.5 text-[10px] text-ink-faint">{task.duration}</span>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
-        {week.project?.title ? (
-          <p className="mt-4 flex items-start gap-2 rounded-xl border border-stroke bg-panel px-3 py-2.5">
-            <FolderGit2 className="mt-0.5 size-3.5 shrink-0 text-brand-sky" strokeWidth={1.9} />
-            <span className="min-w-0 text-[11px] leading-relaxed text-ink-subtle">
-              <span className="block font-medium text-ink-muted">{week.project.title}</span>
-              {week.project.description ? week.project.description : null}
-            </span>
-          </p>
-        ) : null}
+          {week.project?.title ? (
+            <p className="mt-4 flex items-start gap-2 rounded-xl border border-stroke bg-panel px-3 py-2.5">
+              <FolderGit2 className="mt-0.5 size-3.5 shrink-0 text-brand-sky" strokeWidth={1.9} />
+              <span className="min-w-0 text-[11px] leading-relaxed text-ink-subtle">
+                <span className="block font-medium text-ink-muted">{week.project.title}</span>
+                {week.project.description ? week.project.description : null}
+              </span>
+            </p>
+          ) : null}
 
-        {week.outcome ? (
-          <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-ink-subtle">
-            <Target className="mt-0.5 size-3 shrink-0 text-brand-amber" strokeWidth={2} />
-            <span>
-              <span className="font-medium text-ink-muted">Expected outcome: </span>
-              {week.outcome}
-            </span>
-          </p>
-        ) : null}
+          {week.outcome ? (
+            <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-ink-subtle">
+              <Target className="mt-0.5 size-3 shrink-0 text-brand-amber" strokeWidth={2} />
+              <span>
+                <span className="font-medium text-ink-muted">Expected outcome: </span>
+                {week.outcome}
+              </span>
+            </p>
+          ) : null}
+        </div>
       </div>
     </li>
   )
@@ -129,7 +133,7 @@ export default function RoadmapSection({ roadmap, delay = 0, className }) {
   const { weeks, roleTitle, totalHours, hasData, consolidation, source, interviewThemes } = roadmap
 
   return (
-    <div id="roadmap" className={cx('min-w-0 scroll-mt-24', className)}>
+    <div id="roadmap" className={cx('flex min-w-0 scroll-mt-24 flex-col', className)}>
       <DashboardCard
         icon={CalendarRange}
         eyebrow="30-Day Career Roadmap"
@@ -154,14 +158,14 @@ export default function RoadmapSection({ roadmap, delay = 0, className }) {
       >
         {hasData ? (
           <>
-            <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <ol className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {weeks.map((week, index) => (
                 <WeekCard key={week.key} week={week} index={index} total={weeks.length} />
               ))}
             </ol>
 
             {interviewThemes.length ? (
-              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-stroke-soft pt-4">
+              <div className="mt-5 flex shrink-0 flex-wrap items-center gap-2 border-t border-stroke-soft pt-4">
                 <Sparkles className="size-3.5 shrink-0 text-brand-violet-soft" strokeWidth={1.9} />
                 <span className="text-[11px] uppercase tracking-wider text-ink-faint">
                   What this role is assessed on

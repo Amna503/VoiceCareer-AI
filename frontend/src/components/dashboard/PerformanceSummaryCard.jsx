@@ -64,24 +64,26 @@ export default function PerformanceSummaryCard({ performance, delay = 0, classNa
         </blockquote>
       ) : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-2.5">
-        {performance.signals.map((signal) => (
-          <div
-            key={signal.key}
-            className="rounded-xl border border-stroke bg-panel-inset px-3 py-2.5"
-          >
-            <div className="flex items-center gap-1.5">
-              <span
-                className={cx('size-1.5 rounded-full', SIGNAL_TONE[signal.tone] || SIGNAL_TONE.slate)}
-                aria-hidden="true"
-              />
-              <p className="line-clamp-2 text-[10px] uppercase leading-relaxed tracking-wider text-ink-faint">
-                {signal.label}
-              </p>
+      <div className="mt-auto shrink-0 pt-4">
+        <div className="grid grid-cols-2 gap-2.5">
+          {performance.signals.map((signal) => (
+            <div
+              key={signal.key}
+              className="rounded-xl border border-stroke bg-panel-inset px-3 py-2.5"
+            >
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={cx('size-1.5 shrink-0 rounded-full', SIGNAL_TONE[signal.tone] || SIGNAL_TONE.slate)}
+                  aria-hidden="true"
+                />
+                <p className="line-clamp-2 text-[10px] uppercase leading-relaxed tracking-wider text-ink-faint">
+                  {signal.label}
+                </p>
+              </div>
+              <p className="mt-1 text-sm font-semibold tabular-nums text-ink">{signal.value}</p>
             </div>
-            <p className="mt-1 text-sm font-semibold tabular-nums text-ink">{signal.value}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </DashboardCard>
   )

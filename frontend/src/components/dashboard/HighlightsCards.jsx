@@ -26,11 +26,11 @@ export function StrengthsCard({ highlights, delay = 0, className }) {
       action={items.length ? <Pill tone="emerald">{items.length} found</Pill> : null}
     >
       {items.length ? (
-        <ul className="space-y-2.5">
+        <ul className="flex flex-1 flex-col justify-between gap-2.5">
           {items.map((item, index) => (
             <li
               key={`${item}-${index}`}
-              className="flex items-start gap-2.5 rounded-xl border border-stroke bg-panel-inset px-3.5 py-3 transition-colors hover:border-brand-emerald/35"
+              className="flex items-start gap-2.5 rounded-xl border border-stroke bg-panel-inset px-3.5 py-2.5 transition-colors hover:border-brand-emerald/35"
             >
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand-emerald" strokeWidth={2} />
               <p className="text-[13px] leading-relaxed text-ink-muted">{item}</p>
@@ -66,11 +66,11 @@ export function ImprovementsCard({ highlights, delay = 0, className }) {
       action={items.length ? <Pill tone="rose">{items.length} to work on</Pill> : null}
     >
       {items.length ? (
-        <ul className="space-y-2.5">
+        <ul className="flex flex-1 flex-col justify-between gap-2.5">
           {items.map((item, index) => (
             <li
               key={`${item}-${index}`}
-              className="flex items-start gap-2.5 rounded-xl border border-stroke bg-panel-inset px-3.5 py-3 transition-colors hover:border-brand-rose/35"
+              className="flex items-start gap-2.5 rounded-xl border border-stroke bg-panel-inset px-3.5 py-2.5 transition-colors hover:border-brand-rose/35"
             >
               <span
                 className="mt-[7px] size-1.5 shrink-0 rounded-full bg-brand-rose"
