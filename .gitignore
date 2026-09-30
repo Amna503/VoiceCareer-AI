@@ -1,4 +1,13 @@
 node_modules/
 dist/
-.env
 *.log
+
+# Real environment files. `.env.example` is committed on purpose, so the
+# ignore patterns must stay narrower than `.env*` or the templates would be
+# excluded too.
+.env
+.env.local
+.env.*.local
+
+# Vercel project linkage — `.vercel/` holds the OIDC token, never commit it.
+.vercel
