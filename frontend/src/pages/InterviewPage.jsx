@@ -43,6 +43,12 @@ const INTERVIEW_MODES = [
   { value: 'hr', label: 'HR / Behavioral' },
 ]
 
+/**
+ * The evaluator needs a question and an answer, so two turns is the smallest
+ * interview worth scoring.
+ */
+const MIN_SCOREABLE_TURNS = 2
+
 function ResultsSummary({ analysis, onContinue }) {
   if (!analysis) return null
 
@@ -126,6 +132,9 @@ function InterviewPage({ onFinish, onBack }) {
   const [jobDescription, setJobDescription] = useState('')
   const [analysis, setAnalysis] = useState(null)
   const [scoring, setScoring] = useState(false)
+  // Set when finishing cannot produce results, so the page explains itself
+  // instead of silently returning to the setup form.
+  const [notice, setNotice] = useState(null)
   // Real wall-clock start of this interview, handed to the dashboard so its
   // header can show when this session actually happened.
   const [startedAt, setStartedAt] = useState(null)
@@ -153,6 +162,7 @@ function InterviewPage({ onFinish, onBack }) {
 
   const handleStart = () => {
     setAnalysis(null)
+    setNotice(null)
     setStartedAt(new Date().toISOString())
     start({
       targetRole,
@@ -164,28 +174,49 @@ function InterviewPage({ onFinish, onBack }) {
   }
 
   const handleFinish = async () => {
-    setScoring(true)
     const interviewHistory = getInterviewHistory()
+
+    // Scoring needs a question *and* an answer. Checking before stop() matters:
+    // hanging up first closed the session and dropped the user back on the setup
+    // form with no explanation, which reads as a broken app rather than a
+    // too-short interview. The mic stays live so they can just answer.
+    if (interviewHistory.length < MIN_SCOREABLE_TURNS) {
+      setNotice(
+        'Answer at least one question first — there is nothing to score yet. ' +
+          'Keep talking, then choose Finish Interview.'
+      )
+      return
+    }
+
+    setNotice(null)
+    setScoring(true)
     try {
       await stop()
-      if (interviewHistory.length >= 2) {
-        const response = await fetch(apiUrl('/api/evaluate/complete'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId,
-            interviewHistory,
-            targetRole,
-            mode,
-            jobDescription: jobDescription.trim() || undefined,
-            candidateProfile: { name: candidateName.trim() || null },
-          }),
-        })
-        const data = await response.json().catch(() => ({}))
-        if (response.ok) setAnalysis(data)
+      const response = await fetch(apiUrl('/api/evaluate/complete'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          interviewHistory,
+          targetRole,
+          mode,
+          jobDescription: jobDescription.trim() || undefined,
+          candidateProfile: { name: candidateName.trim() || null },
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.error || 'Could not score this interview. Please try again.')
       }
-    } catch {
-      /* the interview is already closed; fall through to the dashboard */
+      setAnalysis(data)
+    } catch (err) {
+      // The session is already closed by this point, so the candidate cannot
+      // retry in place. Say what happened instead of failing silently.
+      setNotice(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Could not score this interview. Please try again.'
+      )
     } finally {
       setScoring(false)
     }
@@ -318,6 +349,15 @@ function InterviewPage({ onFinish, onBack }) {
       {error ? (
         <div className="w-full max-w-2xl bg-coral-pulse/15 border border-coral-pulse/40 text-coral-pulse rounded-lg px-4 py-3 text-sm">
           {error}
+        </div>
+      ) : null}
+
+      {notice ? (
+        <div
+          role="status"
+          className="w-full max-w-2xl bg-amber-400/10 border border-amber-400/40 text-amber-100 rounded-lg px-4 py-3 text-sm"
+        >
+          {notice}
         </div>
       ) : null}
 
