@@ -260,6 +260,9 @@ Add a currentLevel and a concrete suggestedImprovement to each gap, and write a 
       jobDescription,
       experience,
       evaluation: context.evaluation || null,
+      // The engine falls back to the transcript when no skill list was supplied,
+      // so this has to be forwarded or every role skill is reported as a gap.
+      interviewHistory: context.interviewHistory || null,
     });
 
     const enrichment = await this.enrichSkillGaps(
